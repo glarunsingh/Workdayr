@@ -1,0 +1,75 @@
+# Workdayr - Development Requirements
+# =====================================
+# This file tracks all prerequisites and dependencies needed for development.
+# Check off items as you install them.
+
+## System Prerequisites
+# ---------------------
+[x] Node.js v18.0.0 or higher (LTS recommended) --> INSTALLED: v24.12.0
+[x] npm v9.0.0 or higher (comes with Node.js) --> INSTALLED: v11.6.2
+[x] Git (for version control) --> INSTALLED: v2.52.0
+[x] VS Code (recommended editor) --> INSTALLED
+
+## Expo CLI
+# ---------
+[x] Expo CLI (installed globally via: npx create-expo-app) --> INSTALLED via npx
+    - Project created in /app folder
+    - Template: tabs (with Expo Router)
+    - Web server running at http://localhost:8081
+
+## Supabase
+# ---------
+[x] Supabase account (https://supabase.com - free tier) --> CREATED
+[x] Supabase project created --> workdayr (uhwxuskgoecsjkdcybxf)
+[x] API keys obtained (anon key, URL) --> Configured in .env
+[x] @supabase/supabase-js installed
+[x] expo-secure-store installed (for auth tokens)
+
+## Optional (for mobile testing)
+# ------------------------------
+[ ] Android Studio (for Android Emulator)
+[ ] Xcode (for iOS Simulator - Mac only)
+[ ] Expo Go app on physical device (easiest option)
+
+## VS Code Extensions (Recommended)
+# ---------------------------------
+[ ] ES7+ React/Redux/React-Native snippets
+[ ] Prettier - Code formatter
+[ ] ESLint
+[ ] Expo Tools
+[ ] GitLens
+
+## Project Dependencies (will be installed via npm)
+# -------------------------------------------------
+# These will be added to package.json automatically:
+[x] expo
+[x] expo-router
+[x] react
+[x] react-native
+[x] @supabase/supabase-js
+[x] expo-secure-store (for auth tokens)
+[x] @expo/vector-icons
+
+## Database Schema (Supabase)
+# ---------------------------
+[x] profiles table created
+[x] companies table created
+[x] teams table created
+[x] team_members table created
+[x] tasks table created
+[x] RLS policies configured
+[x] Auto-create profile trigger set up
+[x] Updated_at triggers configured
+
+## Environment Variables Needed
+# -----------------------------
+[x] EXPO_PUBLIC_SUPABASE_URL=configured
+[x] EXPO_PUBLIC_SUPABASE_ANON_KEY=configured
+
+## Authentication
+# ---------------
+[x] Login screen working
+[x] Signup screen working
+[x] Email confirmation working
+[x] Protected routes working
+[x] Auth context (signIn, signUp, signOut) working

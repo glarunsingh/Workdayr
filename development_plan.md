@@ -22,40 +22,75 @@ A calendar-first task manager that unifies personal and business task management
 
 ---
 
-## Phase 1: Foundation & Setup
+## Phase 1: Foundation & Setup ✅ COMPLETE
 
 **Duration:** Week 1  
+**Completed:** January 30, 2026  
 **Goal:** Project scaffolding, database setup, and authentication flow
+
+### What Was Built
+
+| Component | Files Created |
+|-----------|---------------|
+| Expo Project | `/app` folder with React Native + Expo Router |
+| Supabase Config | `lib/supabase.ts` - Client with secure storage |
+| Auth Context | `lib/auth.tsx` - signIn, signUp, signOut hooks |
+| Login Screen | `app/(auth)/login.tsx` |
+| Signup Screen | `app/(auth)/signup.tsx` |
+| Protected Routes | `app/_layout.tsx` - Redirects unauthenticated users |
+| Database Schema | `supabase/schema.sql` - 5 tables with RLS |
+
+### Database Tables Created
+
+| Table | Purpose |
+|-------|---------|
+| `profiles` | User profiles (auto-created on signup) |
+| `companies` | Business entities |
+| `teams` | Teams within companies |
+| `team_members` | User-team relationships with roles |
+| `tasks` | All tasks (personal & business) |
 
 ### Tasks
 
-| # | Task | Description |
-|---|------|-------------|
-| 1.1 | Setup React Native + RN Web project | Initialize project with Expo or bare React Native |
-| 1.2 | Setup Supabase project | Create project, configure environment variables |
-| 1.3 | Design database schema | Create tables: `users`, `tasks`, `teams`, `companies` |
-| 1.4 | Setup authentication flow | Email/password signup and login |
-| 1.5 | Setup navigation structure | Personal/Business mode toggle, basic routing |
+| # | Task | Status |
+|---|------|--------|
+| 1.1 | Setup React Native + RN Web project | ✅ Done |
+| 1.2 | Setup Supabase project | ✅ Done |
+| 1.3 | Design database schema | ✅ Done |
+| 1.4 | Setup authentication flow | ✅ Done |
+| 1.5 | Setup navigation structure | ✅ Done |
 
 ### Acceptance Criteria
 
-- [ ] App runs on web browser
-- [ ] App runs on iOS simulator
-- [ ] App runs on Android emulator
-- [ ] User can sign up with email/password
-- [ ] User can log in and see a home screen
-- [ ] Database tables created with proper relationships
-- [ ] Row Level Security (RLS) policies enabled
-- [ ] Personal/Business mode toggle visible (even if not functional yet)
+- [x] App runs on web browser
+- [ ] App runs on iOS simulator (not tested yet)
+- [ ] App runs on Android emulator (not tested yet)
+- [x] User can sign up with email/password
+- [x] User can log in and see a home screen
+- [x] Database tables created with proper relationships
+- [x] Row Level Security (RLS) policies enabled
+- [ ] Personal/Business mode toggle visible (Phase 2)
 
 ### Open Questions
 
 | # | Question | Decision |
 |---|----------|----------|
-| Q1.1 | Monorepo with Expo Router or separate web/mobile builds? | _TBD_ |
-| Q1.2 | Supabase free tier or paid from start? | _TBD_ |
-| Q1.3 | Use Expo managed workflow or bare React Native? | _TBD_ |
-| Q1.4 | Any UI component library preference (NativeBase, Tamagui, etc.)? | _TBD_ |
+| Q1.1 | Monorepo with Expo Router or separate web/mobile builds? | ✅ **Expo Router** — Easier for solo dev, handles builds |
+| Q1.2 | Supabase free tier or paid from start? | ✅ **Free tier** — Sufficient for MVP (500MB DB, 50K MAU) |
+| Q1.3 | Use Expo managed workflow or bare React Native? | ✅ **Expo managed** — Simpler tooling, EAS builds |
+| Q1.4 | Any UI component library preference (NativeBase, Tamagui, etc.)? | ✅ **Custom StyleSheet** — Learn fundamentals, full control over calendar UX |
+
+### Tech Stack (Confirmed)
+
+| Layer | Technology | Reason |
+|-------|------------|--------|
+| Framework | Expo SDK 52+ | Managed workflow, EAS builds |
+| Routing | Expo Router | File-based routing for web + mobile |
+| Styling | React Native StyleSheet | Learn fundamentals, no extra deps |
+| Icons | @expo/vector-icons | Built into Expo |
+| Backend | Supabase (Free tier) | Auth, DB, Realtime, RLS |
+| Database | PostgreSQL (via Supabase) | Relational, date-friendly |
+| Web Hosting | Vercel | Free, easy Expo web deploy |
 
 ### Dependencies
 
@@ -69,18 +104,48 @@ A calendar-first task manager that unifies personal and business task management
 ## Phase 2: Core Calendar UI
 
 **Duration:** Week 2–3  
+**Status:** 🔜 Next  
 **Goal:** Build the calendar-first interface (monthly view + day view)
 
-### Tasks
+### Step-by-Step Implementation Order
 
-| # | Task | Description |
-|---|------|-------------|
-| 2.1 | Build monthly calendar component | Grid layout with navigation (prev/next month) |
-| 2.2 | Fetch tasks and aggregate by date | Query tasks, group by due date |
-| 2.3 | Show task summary per day | Display `X Pending | Y Completed | Z Past Due` per cell |
-| 2.4 | Build day view screen/modal | Clicking a date opens detailed task list |
-| 2.5 | Task card component | Displays title, status, due indicator |
-| 2.6 | Empty state handling | Show message when no tasks exist |
+| Step | Task | Description | Est. Time |
+|------|------|-------------|-----------|
+| 2.1 | Replace default tabs with Calendar tab | Update tab navigation to show Calendar as home | 30 min |
+| 2.2 | Build CalendarHeader component | Month/year display + prev/next navigation | 1 hour |
+| 2.3 | Build CalendarGrid component | 7-column grid with day labels (Mon-Sun or Sun-Sat) | 2 hours |
+| 2.4 | Build CalendarDay component | Individual day cell, handles today/selected state | 1 hour |
+| 2.5 | Add month navigation logic | State for current month, prev/next handlers | 30 min |
+| 2.6 | Create tasks service | `lib/tasks.ts` - Supabase queries for tasks | 1 hour |
+| 2.7 | Fetch tasks for current month | Query tasks by date range, aggregate counts | 1 hour |
+| 2.8 | Show task counts in day cells | Display pending/completed/overdue counts | 1 hour |
+| 2.9 | Build DayView screen | Full task list for selected date | 2 hours |
+| 2.10 | Build TaskCard component | Displays task title, status, priority | 1 hour |
+| 2.11 | Add empty states | "No tasks" messages for calendar and day view | 30 min |
+| 2.12 | Add loading states | Skeleton/spinner while fetching | 30 min |
+
+### Files to Create
+
+```
+app/
+├── app/
+│   ├── (tabs)/
+│   │   ├── index.tsx          # Calendar screen (replace existing)
+│   │   └── _layout.tsx        # Update tab labels/icons
+│   └── day/
+│       └── [date].tsx         # Day view screen (dynamic route)
+├── components/
+│   ├── calendar/
+│   │   ├── CalendarHeader.tsx
+│   │   ├── CalendarGrid.tsx
+│   │   ├── CalendarDay.tsx
+│   │   └── MonthCalendar.tsx  # Main calendar component
+│   └── tasks/
+│       ├── TaskCard.tsx
+│       └── TaskList.tsx
+└── lib/
+    └── tasks.ts               # Task queries and types
+```
 
 ### Acceptance Criteria
 
@@ -93,14 +158,14 @@ A calendar-first task manager that unifies personal and business task management
 - [ ] Calendar loads within 500ms
 - [ ] Works on web and mobile
 
-### Open Questions
+### Open Questions (Need Decisions)
 
 | # | Question | Decision |
 |---|----------|----------|
-| Q2.1 | Use existing calendar library or build custom? | _TBD_ |
-| Q2.2 | Week starts on Sunday or Monday? | _TBD_ |
-| Q2.3 | How many tasks to show in summary before truncating? | _TBD_ |
-| Q2.4 | Day view as modal overlay or separate screen? | _TBD_ |
+| Q2.1 | Use existing calendar library or build custom? | **Recommend: Build custom** — More control for task integration |
+| Q2.2 | Week starts on Sunday or Monday? | ⏳ _Waiting for answer_ |
+| Q2.3 | How many tasks to show in summary before truncating? | **Recommend: Show counts only** (e.g., "3 pending") |
+| Q2.4 | Day view as modal overlay or separate screen? | **Recommend: Separate screen** — Better for mobile UX |
 
 ### Dependencies
 
@@ -319,7 +384,10 @@ Track key decisions made during development:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| _YYYY-MM-DD_ | _Decision made_ | _Why this was chosen_ |
+| 2026-01-30 | Use Expo Router (monorepo) | Solo developer, simpler setup, EAS handles builds |
+| 2026-01-30 | Supabase Free Tier | Sufficient for MVP (500MB DB, 50K MAU) |
+| 2026-01-30 | Custom StyleSheet (no UI library) | Learn RN fundamentals, full control over calendar UX |
+| 2026-01-30 | Expo managed workflow | Avoid native complexity, easier updates |
 
 ---
 
