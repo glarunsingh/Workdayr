@@ -10,51 +10,75 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Link, router } from 'expo-router';
+import { FontAwesome } from '@expo/vector-icons';
 import { useAuth } from '../../lib/auth';
 
-// Cross-platform alert helper
-const showAlert = (title: string, message: string) => {
-  if (Platform.OS === 'web') {
-    window.alert(`${title}\n\n${message}`);
-  } else {
-    // Dynamic import for native Alert
-    const { Alert } = require('react-native');
-    Alert.alert(title, message);
-  }
-};
-
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { signIn } = useAuth();
+  const { resetPassword } = useAuth();
 
-  const handleLogin = async () => {
+  const handleResetPassword = async () => {
     setErrorMessage(null);
     
-    if (!email || !password) {
-      setErrorMessage('Please fill in all fields');
+    if (!email) {
+      setErrorMessage('Please enter your email address');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setErrorMessage('Please enter a valid email address');
       return;
     }
 
     setLoading(true);
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await resetPassword(email);
       
       if (error) {
-        console.error('Login error:', error);
-        setErrorMessage(error.message || 'Login failed. Please check your credentials.');
+        console.error('Reset password error:', error);
+        setErrorMessage(error.message || 'Failed to send reset email');
       } else {
-        router.replace('/(tabs)');
+        setSuccess(true);
       }
     } catch (e: any) {
-      console.error('Unexpected login error:', e);
+      console.error('Unexpected reset error:', e);
       setErrorMessage(e?.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
   };
+
+  if (success) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.successIcon}>
+            <FontAwesome name="check-circle" size={64} color="#007AFF" />
+          </View>
+          <Text style={styles.title}>Check Your Email</Text>
+          <Text style={styles.successText}>
+            We've sent a password reset link to:
+          </Text>
+          <Text style={styles.emailText}>{email}</Text>
+          <Text style={styles.instructionText}>
+            Click the link in the email to reset your password. If you don't see it, check your spam folder.
+          </Text>
+          
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => router.replace('/(auth)/login')}
+          >
+            <Text style={styles.buttonText}>Back to Login</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -62,8 +86,18 @@ export default function LoginScreen() {
       style={styles.container}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Workdayr</Text>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <FontAwesome name="arrow-left" size={20} color="#007AFF" />
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.title}>Reset Password</Text>
+        <Text style={styles.subtitle}>
+          Enter your email address and we'll send you a link to reset your password.
+        </Text>
 
         {errorMessage && (
           <View style={styles.errorContainer}>
@@ -84,45 +118,27 @@ export default function LoginScreen() {
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
+            autoFocus
           />
-
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#999"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              setErrorMessage(null);
-            }}
-            secureTextEntry
-            autoComplete="password"
-          />
-
-          <Link href="/(auth)/forgot-password" asChild>
-            <TouchableOpacity style={styles.forgotPasswordButton}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-          </Link>
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
+            onPress={handleResetPassword}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Sign In</Text>
+              <Text style={styles.buttonText}>Send Reset Link</Text>
             )}
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <Link href="/(auth)/signup" asChild>
+          <Text style={styles.footerText}>Remember your password? </Text>
+          <Link href="/(auth)/login" asChild>
             <TouchableOpacity>
-              <Text style={styles.link}>Sign Up</Text>
+              <Text style={styles.link}>Sign In</Text>
             </TouchableOpacity>
           </Link>
         </View>
@@ -141,18 +157,55 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'absolute',
+    top: 60,
+    left: 24,
+    gap: 8,
+  },
+  backText: {
+    color: '#007AFF',
+    fontSize: 16,
+  },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
     marginBottom: 32,
+    lineHeight: 22,
+  },
+  successIcon: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  successText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emailText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  instructionText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 20,
   },
   form: {
     gap: 16,
@@ -179,14 +232,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  forgotPasswordButton: {
-    alignSelf: 'flex-end',
-    marginTop: -8,
-  },
-  forgotPasswordText: {
-    color: '#007AFF',
-    fontSize: 14,
   },
   errorContainer: {
     backgroundColor: '#FFE5E5',

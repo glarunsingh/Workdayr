@@ -11,6 +11,7 @@ CREATE TABLE profiles (
   full_name TEXT,
   avatar_url TEXT,
   mode TEXT DEFAULT 'personal' CHECK (mode IN ('personal', 'business')),
+  week_starts_on TEXT DEFAULT 'sunday' CHECK (week_starts_on IN ('sunday', 'monday')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
