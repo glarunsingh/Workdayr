@@ -94,7 +94,9 @@ export default function CalendarGrid({
               const dateString = formatDate(date);
               const isToday = dateString === today;
               const isSelected = dateString === selectedDate;
-              const taskSummary = getTaskSummaryForDate(tasks, dateString);
+              const taskSummary = getTaskSummaryForDate(tasks, dateString, {
+                includeCarryForward: false,
+              });
               
               // Check if date is from previous or next month (show greyed out)
               const isNextMonth = date.getMonth() > month || (date.getMonth() === 0 && month === 11);
