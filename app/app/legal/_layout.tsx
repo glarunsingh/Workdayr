@@ -4,7 +4,7 @@ export default function LegalLayout() {
   return (
     <Stack
       screenOptions={{
-        headerBackTitleVisible: false,
+        headerBackTitle: '',
       }}
     />
   );

@@ -4,23 +4,27 @@ import { FontAwesome } from '@expo/vector-icons';
 import { Task } from '@/lib/types';
 import { isTaskOverdue } from '@/lib/tasks';
 import { hapticSelection, hapticSuccess } from '@/lib/haptics';
+import { useAppTheme } from '@/lib/theme';
 
 interface TaskCardProps {
   task: Task;
   onPress: (task: Task) => void;
   onToggleStatus: (task: Task) => void;
+  onToggleProgress?: (task: Task) => void;
   assigneeName?: string | null;
   teamName?: string | null;
 }
 
 const PRIORITY_COLORS = {
-  low: '#999',
-  medium: '#666',
+  low: '#8E8E93',
+  medium: '#6B7280',
   high: '#FF3B30',
 };
 
 export default function TaskCard({ task, onPress, onToggleStatus, assigneeName, teamName }: TaskCardProps) {
+  const { colors } = useAppTheme();
   const isCompleted = task.status === 'completed';
+  const isInProgress = task.status === 'in_progress';
   const isOverdue = isTaskOverdue(task);
 
   const handleToggle = () => {
@@ -33,74 +37,114 @@ export default function TaskCard({ task, onPress, onToggleStatus, assigneeName, 
     onToggleStatus(task);
   };
 
+  const handleToggleProgress = () => {
+    if (isCompleted) return;
+    onToggleProgress?.(task);
+  };
+
   return (
     <TouchableOpacity
-      style={[styles.container, isCompleted && styles.completedContainer]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          shadowColor: colors.shadow,
+        },
+        isCompleted && { backgroundColor: colors.surfaceMuted },
+        isCompleted && styles.completedContainer,
+      ]}
       onPress={() => onPress(task)}
       activeOpacity={0.7}
     >
       <TouchableOpacity
         style={[
           styles.checkbox,
-          isCompleted && styles.checkboxCompleted,
+          { borderColor: colors.primary },
+          isCompleted && { backgroundColor: colors.primary, borderColor: colors.primary },
         ]}
         onPress={handleToggle}
       >
         {isCompleted && (
-          <FontAwesome name="check" size={12} color="#fff" />
+          <FontAwesome name="check" size={12} color={colors.onPrimary} />
         )}
       </TouchableOpacity>
 
       <View style={styles.content}>
         <View style={styles.titleRow}>
           <Text
-            style={[styles.title, isCompleted && styles.completedTitle]}
+            style={[styles.title, { color: colors.text }, isCompleted && styles.completedTitle, isCompleted && { color: colors.textMuted }]}
             numberOfLines={1}
           >
             {task.title}
           </Text>
           {isOverdue && !isCompleted && (
-            <View style={styles.overdueBadge}>
-              <Text style={styles.overdueText}>Past Due</Text>
+            <View style={[styles.overdueBadge, { backgroundColor: colors.danger }]}>
+              <Text style={[styles.overdueText, { color: colors.onDanger }]}>Past Due</Text>
             </View>
           )}
         </View>
 
         {task.description && (
-          <Text style={styles.description} numberOfLines={2}>
+          <Text style={[styles.description, { color: colors.textMuted }]} numberOfLines={2}>
             {task.description}
           </Text>
         )}
 
         <View style={styles.metaRow}>
           <View style={[styles.priorityBadge, { backgroundColor: PRIORITY_COLORS[task.priority] }]}>
-            <Text style={styles.priorityText}>{task.priority}</Text>
+            <Text style={[styles.priorityText, { color: colors.onPrimary }]}>{task.priority}</Text>
           </View>
+
+          {!isCompleted && (
+            <TouchableOpacity
+              style={[
+                styles.statusBadge,
+                { backgroundColor: isInProgress ? `${colors.warning}20` : `${colors.primary}18` },
+              ]}
+              onPress={handleToggleProgress}
+              activeOpacity={0.85}
+            >
+              <FontAwesome
+                name={isInProgress ? 'pause' : 'play'}
+                size={10}
+                color={isInProgress ? colors.warning : colors.primary}
+              />
+              <Text
+                style={[
+                  styles.statusText,
+                  { color: isInProgress ? colors.warning : colors.primary },
+                ]}
+              >
+                {isInProgress ? 'In progress' : 'New'}
+              </Text>
+            </TouchableOpacity>
+          )}
           
           {task.end_date && task.end_date !== task.due_date && (
-            <View style={styles.multiDayBadge}>
-              <FontAwesome name="calendar" size={10} color="#666" />
-              <Text style={styles.multiDayText}>Multi-day</Text>
+            <View style={[styles.multiDayBadge, { backgroundColor: colors.surfaceMuted }] }>
+              <FontAwesome name="calendar" size={10} color={colors.textMuted} />
+              <Text style={[styles.multiDayText, { color: colors.textMuted }]}>Multi-day</Text>
             </View>
           )}
 
           {teamName && (
-            <View style={styles.teamBadge}>
-              <FontAwesome name="users" size={10} color="#007AFF" />
-              <Text style={styles.teamText}>{teamName}</Text>
+            <View style={[styles.teamBadge, { backgroundColor: `${colors.primary}18` }]}>
+              <FontAwesome name="users" size={10} color={colors.primary} />
+              <Text style={[styles.teamText, { color: colors.primary }]}>{teamName}</Text>
             </View>
           )}
 
           {assigneeName && (
-            <View style={styles.assigneeBadge}>
-              <FontAwesome name="user" size={10} color="#34C759" />
-              <Text style={styles.assigneeText}>{assigneeName}</Text>
+            <View style={[styles.assigneeBadge, { backgroundColor: `${colors.success}18` }]}>
+              <FontAwesome name="user" size={10} color={colors.success} />
+              <Text style={[styles.assigneeText, { color: colors.success }]}>{assigneeName}</Text>
             </View>
           )}
         </View>
       </View>
 
-      <FontAwesome name="chevron-right" size={14} color="#ccc" style={styles.chevron} />
+      <FontAwesome name="chevron-right" size={14} color={colors.textMuted} style={styles.chevron} />
     </TouchableOpacity>
   );
 }
@@ -109,8 +153,8 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 6,
@@ -121,7 +165,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   completedContainer: {
-    backgroundColor: '#f9f9f9',
     opacity: 0.8,
   },
   checkbox: {
@@ -129,14 +172,9 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-  },
-  checkboxCompleted: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
   },
   content: {
     flex: 1,
@@ -149,15 +187,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     flex: 1,
   },
   completedTitle: {
     textDecorationLine: 'line-through',
-    color: '#999',
   },
   overdueBadge: {
-    backgroundColor: '#FF3B30',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -170,13 +205,24 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 8,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   priorityBadge: {
     paddingHorizontal: 8,
@@ -196,10 +242,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
-    backgroundColor: '#f0f0f0',
   },
   multiDayText: {
-    color: '#666',
     fontSize: 10,
     fontWeight: '500',
   },
@@ -210,10 +254,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
-    backgroundColor: '#007AFF15',
   },
   teamText: {
-    color: '#007AFF',
     fontSize: 10,
     fontWeight: '500',
   },
@@ -224,10 +266,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
-    backgroundColor: '#34C75915',
   },
   assigneeText: {
-    color: '#34C759',
     fontSize: 10,
     fontWeight: '500',
   },

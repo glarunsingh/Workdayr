@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
@@ -64,9 +65,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window?.location?.origin || 'http://localhost:8081'}/reset-password`,
-    });
+    const redirectTo =
+      Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin
+        ? `${window.location.origin}/reset-password`
+        : undefined;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email,
+      redirectTo ? { redirectTo } : undefined
+    );
     return { error };
   };
 

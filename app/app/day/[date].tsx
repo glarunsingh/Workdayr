@@ -1,13 +1,15 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack, useFocusEffect } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
-import { TaskList } from '@/components/tasks';
+import { TaskList, TaskModal } from '@/components/tasks';
 import { useAuth } from '@/lib/auth';
 import { useCompany } from '@/lib/company';
 import { Task } from '@/lib/types';
-import { fetchTasksForDate, toggleTaskStatus, formatDate } from '@/lib/tasks';
+import { createTask, fetchTasksForDate, toggleTaskStatus, setTaskStatus, formatDate } from '@/lib/tasks';
+import type { TaskFormValues } from '@/components/tasks/TaskForm';
 import { useTaskRealtime } from '@/lib/realtime';
+import { useAppTheme } from '@/lib/theme';
 
 // Format date for display
 const formatDisplayDate = (dateString: string): string => {
@@ -28,13 +30,26 @@ const isToday = (dateString: string): boolean => {
 };
 
 export default function DayViewScreen() {
-  const { date } = useLocalSearchParams<{ date: string }>();
+  const { date, flash } = useLocalSearchParams<{ date: string; flash?: string | string[] }>();
   const router = useRouter();
   const { session } = useAuth();
-  const { teams, teamMembersWithProfiles } = useCompany();
+  const { teams, teamMembersWithProfiles, isAdmin } = useCompany();
+  const { colors, scheme } = useAppTheme();
   
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [flashMessage, setFlashMessage] = useState<string | null>(null);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [creatingTask, setCreatingTask] = useState(false);
+
+  useEffect(() => {
+    const message = Array.isArray(flash) ? flash[0] : flash;
+    if (!message) return;
+
+    setFlashMessage(message);
+    const timeoutId = setTimeout(() => setFlashMessage(null), 2500);
+    return () => clearTimeout(timeoutId);
+  }, [flash]);
 
   // Build name lookup maps for display
   const teamNames = useMemo(() => {
@@ -60,6 +75,7 @@ export default function DayViewScreen() {
 
   // Filter state: 'all' | 'mine' | specific user_id
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
+  const [focusedFilter, setFocusedFilter] = useState<string | null>(null);
 
   // Build filter options from unique assignees in tasks
   const filterOptions = useMemo(() => {
@@ -100,24 +116,29 @@ export default function DayViewScreen() {
 
     setLoading(true);
     try {
-      const fetchedTasks = await fetchTasksForDate(session.user.id, date, teamIds);
+      const fetchedTasks = await fetchTasksForDate(session.user.id, date, teamIds, isAdmin);
       setTasks(fetchedTasks);
     } catch (error) {
       console.error('Failed to load tasks:', error);
     } finally {
       setLoading(false);
     }
-  }, [date, session?.user?.id, teamIds]);
+  }, [date, session?.user?.id, teamIds, isAdmin]);
 
   // Handle real-time task changes
   const handleTaskChange = useCallback(
     (eventType: 'INSERT' | 'UPDATE' | 'DELETE', task: Task) => {
       if (!date) return;
 
+      const today = formatDate(new Date());
+      const includeCarryForward = date <= today;
+
       // Check if task is relevant to the current date
       const taskStartDate = task.due_date;
       const taskEndDate = task.end_date || task.due_date;
-      const isRelevantToDate = date >= taskStartDate && date <= taskEndDate;
+      const isRelevantToDate =
+        (date >= taskStartDate && date <= taskEndDate) ||
+        (includeCarryForward && task.status !== 'completed' && taskEndDate < date);
 
       switch (eventType) {
         case 'INSERT':
@@ -153,7 +174,7 @@ export default function DayViewScreen() {
   );
 
   // Subscribe to real-time task changes
-  useTaskRealtime(session?.user?.id, teamIds, handleTaskChange);
+  useTaskRealtime(session?.user?.id, teamIds, handleTaskChange, isAdmin);
 
   // Reload tasks when screen gains focus (e.g., returning from edit/create)
   useFocusEffect(
@@ -177,28 +198,108 @@ export default function DayViewScreen() {
     }
   };
 
+  const handleToggleProgress = async (task: Task) => {
+    if (task.status === 'completed') return;
+
+    try {
+      const nextStatus = task.status === 'in_progress' ? 'new' : 'in_progress';
+      const updatedTask = await setTaskStatus(task, nextStatus);
+      setTasks((prev) =>
+        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+      );
+    } catch (error) {
+      console.error('Failed to update task status:', error);
+    }
+  };
+
   const handleAddTask = () => {
-    router.push(`/task/new?date=${date}`);
+    setCreateModalVisible(true);
+  };
+
+  const handleCreateTask = async (values: TaskFormValues) => {
+    if (!session?.user?.id) return;
+
+    setCreatingTask(true);
+    try {
+      const taskData = {
+        title: values.title,
+        description: values.description || null,
+        due_date: values.due_date,
+        end_date: values.end_date,
+        priority: values.priority,
+        status: values.status,
+        created_by: session.user.id,
+        assignee_id: values.assignee_id,
+        team_id: values.team_id,
+        task_type: values.task_type,
+      };
+
+      const createdTask = await createTask(taskData);
+
+      // Update list if task is relevant to current day
+      if (date) {
+        const taskStartDate = createdTask.due_date;
+        const taskEndDate = createdTask.end_date || createdTask.due_date;
+        const today = formatDate(new Date());
+        const includeCarryForward = date <= today;
+
+        const isRelevantToDate =
+          (date >= taskStartDate && date <= taskEndDate) ||
+          (includeCarryForward && createdTask.status !== 'completed' && taskEndDate < date);
+
+        if (isRelevantToDate) {
+          setTasks((prev) => {
+            if (prev.some((t) => t.id === createdTask.id)) return prev;
+            return [...prev, createdTask];
+          });
+        }
+      }
+
+      setFlashMessage(`Task "${values.title}" created`);
+      setTimeout(() => setFlashMessage(null), 2500);
+      setCreateModalVisible(false);
+    } catch (error) {
+      console.error('Failed to create task:', error);
+    } finally {
+      setCreatingTask(false);
+    }
   };
 
   const displayDate = date ? formatDisplayDate(date) : '';
   const todayLabel = date && isToday(date) ? ' (Today)' : '';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen
         options={{
           title: 'Day View',
           headerBackTitle: 'Calendar',
         }}
       />
+
+      {!!flashMessage && (
+        <View
+          style={[
+            styles.flashBanner,
+            {
+              backgroundColor: scheme === 'dark' ? colors.surfaceMuted : `${colors.success}14`,
+              borderBottomColor: scheme === 'dark' ? colors.border : `${colors.success}35`,
+            },
+          ]}
+        >
+          <Text style={[styles.flashText, { color: colors.success }]} numberOfLines={1}>
+            {flashMessage}
+          </Text>
+        </View>
+      )}
       
       {/* Date Header */}
-      <View style={styles.header}>
-        <Text style={styles.dateText}>{displayDate}{todayLabel}</Text>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.dateText, { color: colors.text }]}>{displayDate}{todayLabel}</Text>
         <View style={styles.summary}>
-          <Text style={styles.summaryText}>
-            {filteredTasks.filter((t) => t.status === 'pending').length} pending • {' '}
+          <Text style={[styles.summaryText, { color: colors.textMuted }]}>
+            {filteredTasks.filter((t) => t.status === 'new').length} new • {' '}
+            {filteredTasks.filter((t) => t.status === 'in_progress').length} in progress • {' '}
             {filteredTasks.filter((t) => t.status === 'completed').length} completed
           </Text>
         </View>
@@ -206,30 +307,41 @@ export default function DayViewScreen() {
 
       {/* Filter Bar (only show when there are team tasks) */}
       {teams.length > 0 && (
-        <View style={styles.filterContainer}>
+        <View style={[styles.filterContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterScroll}
           >
             {filterOptions.map((option) => (
-              <TouchableOpacity
+              <Pressable
                 key={option.value}
-                style={[
+                onFocus={() => setFocusedFilter(option.value)}
+                onBlur={() => setFocusedFilter((prev) => (prev === option.value ? null : prev))}
+                style={({ pressed, hovered }) => [
                   styles.filterChip,
-                  assigneeFilter === option.value && styles.filterChipActive,
+                  {
+                    backgroundColor: colors.surfaceMuted,
+                    borderColor: colors.border,
+                  },
+                  (hovered || focusedFilter === option.value) && Platform.OS === 'web' && {
+                    borderColor: colors.primary,
+                  },
+                  assigneeFilter === option.value && { backgroundColor: colors.primary, borderColor: colors.primary },
+                  pressed && { opacity: 0.85 },
                 ]}
                 onPress={() => setAssigneeFilter(option.value)}
               >
                 <Text
                   style={[
                     styles.filterChipText,
-                    assigneeFilter === option.value && styles.filterChipTextActive,
+                    { color: colors.textMuted },
+                    assigneeFilter === option.value && { color: colors.onPrimary },
                   ]}
                 >
                   {option.label}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </ScrollView>
         </View>
@@ -242,13 +354,34 @@ export default function DayViewScreen() {
         emptyMessage={`No tasks for ${date && isToday(date) ? 'today' : 'this day'}`}
         onTaskPress={handleTaskPress}
         onToggleStatus={handleToggleStatus}
+        onToggleProgress={handleToggleProgress}
         assigneeNames={assigneeNames}
         teamNames={teamNames}
       />
 
+      <TaskModal
+        visible={createModalVisible}
+        title="Create Task"
+        submitLabel="Create"
+        isLoading={creatingTask}
+        onClose={() => setCreateModalVisible(false)}
+        onSubmit={handleCreateTask}
+        initialValues={{
+          due_date: date,
+          status: 'new',
+        }}
+        isBusinessMode={teams.length > 0}
+        teams={teams}
+        assignableMembers={teamMembersWithProfiles}
+      />
+
       {/* Add Task FAB */}
-      <TouchableOpacity style={styles.fab} onPress={handleAddTask}>
-        <FontAwesome name="plus" size={24} color="#fff" />
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.shadow }]}
+        onPress={handleAddTask}
+        activeOpacity={0.85}
+      >
+        <FontAwesome name="plus" size={24} color={colors.onPrimary} />
       </TouchableOpacity>
     </View>
   );
@@ -257,31 +390,33 @@ export default function DayViewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+  },
+  flashBanner: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  flashText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   header: {
-    backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   dateText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
   },
   summary: {
     marginTop: 4,
   },
   summaryText: {
     fontSize: 14,
-    color: '#666',
   },
   filterContainer: {
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   filterScroll: {
     paddingHorizontal: 12,
@@ -293,19 +428,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#f0f0f0',
     marginRight: 8,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   filterChipActive: {
-    backgroundColor: '#007AFF',
   },
   filterChipText: {
     fontSize: 14,
-    color: '#666',
     fontWeight: '500',
-  },
-  filterChipTextActive: {
-    color: '#fff',
   },
   fab: {
     position: 'absolute',
@@ -314,7 +444,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

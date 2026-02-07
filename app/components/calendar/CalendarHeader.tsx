@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import { useAppTheme } from '@/lib/theme';
 
 interface CalendarHeaderProps {
   currentDate: Date;
@@ -20,21 +21,25 @@ export default function CalendarHeader({
   onNextMonth,
   onToday,
 }: CalendarHeaderProps) {
+  const { colors, radius, spacing, typography } = useAppTheme();
   const month = MONTH_NAMES[currentDate.getMonth()];
   const year = currentDate.getFullYear();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
       <TouchableOpacity onPress={onPrevMonth} style={styles.navButton}>
-        <FontAwesome name="chevron-left" size={16} color="#007AFF" />
+        <FontAwesome name="chevron-left" size={16} color={colors.primary} />
       </TouchableOpacity>
       
       <TouchableOpacity onPress={onToday} style={styles.titleContainer}>
-        <Text style={styles.monthYear}>{month} {year}</Text>
+        <Text style={[styles.monthYear, { color: colors.text, fontSize: typography.title }]}>
+          {month} {year}
+        </Text>
+        <Text style={[styles.todayHint, { color: colors.textSubtle }]}>Tap to jump to today</Text>
       </TouchableOpacity>
       
       <TouchableOpacity onPress={onNextMonth} style={styles.navButton}>
-        <FontAwesome name="chevron-right" size={16} color="#007AFF" />
+        <FontAwesome name="chevron-right" size={16} color={colors.primary} />
       </TouchableOpacity>
     </View>
   );
@@ -46,8 +51,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   navButton: {
     padding: 8,
@@ -59,8 +64,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   monthYear: {
-    fontSize: 20,
     fontWeight: '600',
-    color: '#000',
+  },
+  todayHint: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

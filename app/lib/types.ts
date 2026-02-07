@@ -1,6 +1,6 @@
 // Types for the Workdayr app
 export type WeekStartDay = 'sunday' | 'monday';
-export type TaskStatus = 'pending' | 'completed';
+export type TaskStatus = 'new' | 'in_progress' | 'completed';
 export type TaskPriority = 'low' | 'medium' | 'high';
 export type TaskType = 'personal' | 'business';
 export type UserMode = 'personal' | 'business';
@@ -34,7 +34,8 @@ export interface Task {
 }
 
 export interface TaskSummary {
-  pending: number;
+  new: number;
+  in_progress: number;
   completed: number;
   overdue: number;
 }

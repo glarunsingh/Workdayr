@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { TaskSummary } from '@/lib/types';
 import { hapticLight } from '@/lib/haptics';
+import { useAppTheme } from '@/lib/theme';
 
 interface CalendarDayProps {
   date: Date;
@@ -22,8 +23,14 @@ export default function CalendarDay({
   taskSummary,
   onPress,
 }: CalendarDayProps) {
+  const { colors } = useAppTheme();
+  const [isFocused, setIsFocused] = React.useState(false);
   const dayNumber = date.getDate();
-  const hasTasks = taskSummary.pending > 0 || taskSummary.completed > 0 || taskSummary.overdue > 0;
+  const hasTasks =
+    taskSummary.new > 0 ||
+    taskSummary.in_progress > 0 ||
+    taskSummary.completed > 0 ||
+    taskSummary.overdue > 0;
 
   const handlePress = () => {
     hapticLight();
@@ -31,42 +38,66 @@ export default function CalendarDay({
   };
 
   return (
-    <TouchableOpacity
-      style={styles.container}
+    <Pressable
       onPress={handlePress}
-      activeOpacity={0.6}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      accessibilityRole="button"
+      style={({ pressed, hovered }) => [
+        styles.container,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+        },
+        !isCurrentMonth && { backgroundColor: colors.surfaceMuted },
+        isSelected && !isToday && {
+          backgroundColor: colors.surfaceMuted,
+          borderColor: colors.primary,
+          borderWidth: 1,
+        },
+        (hovered || isFocused) && Platform.OS === 'web' && {
+          borderColor: colors.primary,
+          borderWidth: 1,
+        },
+        pressed && { opacity: 0.85 },
+      ]}
     >
       <View style={[
         styles.dayNumberContainer,
-        isToday && styles.todayContainer,
-        isSelected && !isToday && styles.selectedContainer,
+        { borderRadius: 18 },
+        isToday && { backgroundColor: colors.danger },
+        isSelected && !isToday && { backgroundColor: colors.border },
       ]}>
         <Text
           style={[
             styles.dayNumber,
-            !isCurrentMonth && styles.otherMonthText,
+            { color: colors.text },
+            !isCurrentMonth && { color: colors.textSubtle },
             isToday && styles.todayText,
-            isSelected && !isToday && styles.selectedText,
+            isSelected && !isToday && { fontWeight: '600' },
           ]}
         >
           {dayNumber}
         </Text>
       </View>
       
-      {hasTasks && isCurrentMonth && (
-        <View style={styles.taskIndicators}>
+      {hasTasks && (
+        <View style={[styles.taskIndicators, !isCurrentMonth && { opacity: 0.6 }]}>
           {taskSummary.overdue > 0 && (
-            <View style={[styles.dot, styles.overdueDot]} />
+            <View style={[styles.dot, { backgroundColor: colors.danger }]} />
           )}
-          {taskSummary.pending > 0 && (
-            <View style={[styles.dot, styles.pendingDot]} />
+          {taskSummary.in_progress > 0 && (
+            <View style={[styles.dot, { backgroundColor: colors.warning }]} />
+          )}
+          {taskSummary.new > 0 && (
+            <View style={[styles.dot, { backgroundColor: colors.primary }]} />
           )}
           {taskSummary.completed > 0 && (
-            <View style={[styles.dot, styles.completedDot]} />
+            <View style={[styles.dot, { backgroundColor: colors.textMuted }]} />
           )}
         </View>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -76,38 +107,22 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingTop: 8,
     paddingRight: 8,
-    backgroundColor: '#fff',
-    borderRightWidth: 0.5,
-    borderBottomWidth: 0.5,
-    borderColor: '#E5E5EA',
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   dayNumberContainer: {
     width: 36,
     height: 36,
-    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  todayContainer: {
-    backgroundColor: '#FF3B30',
-  },
-  selectedContainer: {
-    backgroundColor: '#E5E5EA',
   },
   dayNumber: {
     fontSize: 17,
     fontWeight: '400',
-    color: '#000',
-  },
-  otherMonthText: {
-    color: '#C7C7CC',
   },
   todayText: {
     color: '#fff',
     fontWeight: '600',
-  },
-  selectedText: {
-    fontWeight: '500',
   },
   taskIndicators: {
     flexDirection: 'row',
@@ -118,14 +133,5 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-  },
-  pendingDot: {
-    backgroundColor: '#007AFF',
-  },
-  completedDot: {
-    backgroundColor: '#666',
-  },
-  overdueDot: {
-    backgroundColor: '#FF3B30',
   },
 });

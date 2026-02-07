@@ -133,7 +133,7 @@ A calendar-first task manager that unifies personal and business task management
 | 2.5 | Add month navigation logic | State for current month, prev/next handlers | ✅ Done |
 | 2.6 | Create tasks service | `lib/tasks.ts` - Supabase queries for tasks | ✅ Done |
 | 2.7 | Fetch tasks for current month | Query tasks by date range, aggregate counts | ✅ Done |
-| 2.8 | Show task counts in day cells | Display pending/completed/overdue counts | ✅ Done |
+| 2.8 | Show task counts in day cells | Display new/in-progress/completed/overdue counts | ✅ Done |
 | 2.9 | Build DayView screen | Full task list for selected date | ✅ Done |
 | 2.10 | Build TaskCard component | Displays task title, status, priority | ✅ Done |
 | 2.11 | Add empty states | "No tasks" messages for calendar and day view | ✅ Done |
@@ -180,7 +180,7 @@ app/
 |---|----------|----------|
 | Q2.1 | Use existing calendar library or build custom? | ✅ **Build custom** — More control for task integration |
 | Q2.2 | Week starts on Sunday or Monday? | ✅ **User-configurable** — Dropdown in Settings, stored in `profiles.week_starts_on` |
-| Q2.3 | How many tasks to show in summary before truncating? | ✅ **Show counts only** (e.g., "3 pending") |
+| Q2.3 | How many tasks to show in summary before truncating? | ✅ **Show counts only** (e.g., "3 new") |
 | Q2.4 | Day view as modal overlay or separate screen? | ✅ **Separate screen** — Better for mobile UX |
 
 ### Dependencies
@@ -215,7 +215,7 @@ app/
 | 3.2 | Task validation | Required fields, date validation | ✅ Done |
 | 3.3 | Edit task functionality | Update any task field | ✅ Done |
 | 3.4 | Delete task with confirmation | Hard delete with Alert confirmation | ✅ Done |
-| 3.5 | Task status toggle | Pending ↔ Completed transition | ✅ Done (Phase 2) |
+| 3.5 | Task status toggle | New/In Progress/Completed transitions | ✅ Done (Phase 2) |
 | 3.6 | Multi-day task logic | Task appears on all dates in range | ✅ Done |
 | 3.7 | Overdue rollover logic | Incomplete tasks show as "Past Due" | ✅ Done (Phase 2) |
 | 3.8 | Visual distinction for overdue | Different color/badge for past due tasks | ✅ Done (Phase 2) |
@@ -236,10 +236,10 @@ app/
 
 | # | Question | Decision |
 |---|----------|----------|
-| Q3.1 | Should overdue tasks show on every day until completed, or just today? | ✅ **Show on due date only** — Current implementation shows on original due date with "Past Due" badge |
+| Q3.1 | Should overdue tasks show on every day until completed, or just today? | ✅ **Show on every day until completed** — Past due tasks carry forward on the calendar/day view until marked completed |
 | Q3.2 | Maximum task duration (can it span more than 7 days)? | ✅ **No limit** — Users can create any duration multi-day tasks |
 | Q3.3 | Should deleted tasks be soft-deleted (recoverable) or hard-deleted? | ✅ **Hard delete** — With confirmation dialog before deletion |
-| Q3.4 | Task statuses: just Pending/Completed, or add In Progress? | ✅ **Pending/Completed only** — Keep it simple for MVP |
+| Q3.4 | Task statuses: New/In Progress/Completed? | ✅ **New/In Progress/Completed** — Better visibility and workflow |
 
 ### Dependencies
 

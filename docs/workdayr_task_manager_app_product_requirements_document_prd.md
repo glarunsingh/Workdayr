@@ -56,7 +56,7 @@ Even without active investors, these pain points justify the POC and future pitc
 **Calendar-Based UX (Core Design Principle)**
 - Monthly calendar view as the default landing screen
 - Each date displays task summary:
-  - X Pending | Y Completed | Z Past Due
+  - X New | Y In Progress | Z Completed | W Past Due
 
 **On Clicking a Date**:
 - Opens a day-level task view
@@ -72,7 +72,7 @@ Even without active investors, these pain points justify the POC and future pitc
   - Title
   - Description
   - Due date
-  - Status
+  - Status (New, In Progress, Completed)
 
 **Business Mode**:
 - Assign tasks to team members
@@ -83,11 +83,12 @@ Even without active investors, these pain points justify the POC and future pitc
   - Assignee
   - Priority
   - Deadline
+  - Status (New, In Progress, Completed)
 
 ### 3.2 Multi-Day Tasks & Overdue Logic
 - Tasks spanning multiple days appear on all relevant dates
 - If a task is not completed on the due date:
-  - It appears on the next day
+  - It continues to appear on subsequent days until completed (shown as Past Due)
   - Marked as **Past Due**
   - Visually distinguished from other tasks
 
@@ -129,6 +130,10 @@ Even without active investors, these pain points justify the POC and future pitc
 - Assign tasks (business only)
 - Task status management
 - Overdue task handling
+
+### Task Dates (MVP)
+- MVP is **date-based** (no due time).
+- Due time / reminders are deferred to post-MVP.
 
 ### Visibility Rules
 - Monthly view: summary only

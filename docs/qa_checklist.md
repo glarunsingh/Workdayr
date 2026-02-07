@@ -47,7 +47,6 @@ Use this checklist to verify all features work correctly before release.
 ### Task Creation
 - [ ] Can create task with title
 - [ ] Can set due date using date picker
-- [ ] Can set due time using time picker
 - [ ] Can set priority (high, medium, low)
 - [ ] Can add notes/description
 - [ ] Task appears in calendar after creation
@@ -58,10 +57,18 @@ Use this checklist to verify all features work correctly before release.
 - [ ] Changes are saved correctly
 - [ ] Cancel discards changes
 
+### Task Status
+- [ ] Can set status to New / In Progress / Completed
+- [ ] Status changes persist and reflect in UI
+
 ### Task Completion
 - [ ] Can toggle task complete/incomplete
 - [ ] Completed tasks show visual indicator
 - [ ] Completion status persists
+
+### Overdue Carry-Forward
+- [ ] Overdue open tasks (New/In Progress) appear on each subsequent day until completed
+- [ ] Overdue tasks show a distinct "Past Due" badge/style
 
 ### Task Deletion
 - [ ] Can delete task

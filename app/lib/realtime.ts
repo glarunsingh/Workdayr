@@ -18,7 +18,8 @@ type TaskChangeCallback = (
 export function useTaskRealtime(
   userId: string | undefined,
   teamIds: string[],
-  onTaskChange: TaskChangeCallback
+  onTaskChange: TaskChangeCallback,
+  includeAllTeamTasks: boolean = false
 ) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const callbackRef = useRef(onTaskChange);
@@ -52,7 +53,8 @@ export function useTaskRealtime(
           const isRelevant = isTaskRelevantToUser(
             newTask || oldTask,
             userId,
-            teamIds
+            teamIds,
+            includeAllTeamTasks
           );
 
           if (!isRelevant) return;
@@ -90,7 +92,7 @@ export function useTaskRealtime(
         channelRef.current = null;
       }
     };
-  }, [userId, teamIds.join(',')]); // Join teamIds to create stable dependency
+  }, [userId, teamIds.join(','), includeAllTeamTasks]); // Join teamIds to create stable dependency
 }
 
 /**
@@ -99,7 +101,8 @@ export function useTaskRealtime(
 function isTaskRelevantToUser(
   task: Task | undefined,
   userId: string,
-  teamIds: string[]
+  teamIds: string[],
+  includeAllTeamTasks: boolean
 ): boolean {
   if (!task) return false;
 
@@ -110,8 +113,12 @@ function isTaskRelevantToUser(
 
   // Team task in user's teams
   if (task.team_id && teamIds.includes(task.team_id)) {
-    // Either assigned to user or unassigned
-    if (!task.assignee_id || task.assignee_id === userId) {
+    if (includeAllTeamTasks) {
+      return true;
+    }
+
+    // Either assigned to user, unassigned, or created by user
+    if (!task.assignee_id || task.assignee_id === userId || task.created_by === userId) {
       return true;
     }
   }

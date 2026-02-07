@@ -17,7 +17,7 @@ export default function MonthCalendar() {
   const router = useRouter();
   const { session } = useAuth();
   const { weekStartsOn } = useSettings();
-  const { teams } = useCompany();
+  const { teams, isAdmin } = useCompany();
   
   // Use a function initializer to ensure we get the current date at mount time
   const [currentDate, setCurrentDate] = useState(() => getToday());
@@ -54,7 +54,8 @@ export default function MonthCalendar() {
         session.user.id,
         formatDate(extendedStart),
         formatDate(extendedEnd),
-        teamIds
+        teamIds,
+        isAdmin
       );
       setTasks(fetchedTasks);
     } catch (error) {
@@ -92,7 +93,7 @@ export default function MonthCalendar() {
   );
 
   // Subscribe to real-time task changes
-  useTaskRealtime(session?.user?.id, teamIds, handleTaskChange);
+  useTaskRealtime(session?.user?.id, teamIds, handleTaskChange, isAdmin);
 
   const handlePrevMonth = () => {
     setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));

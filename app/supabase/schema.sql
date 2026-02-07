@@ -83,7 +83,7 @@ CREATE TABLE tasks (
   end_date DATE, -- For multi-day tasks (NULL = single day)
   
   -- Status & Priority
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
+  status TEXT DEFAULT 'new' CHECK (status IN ('new', 'in_progress', 'completed')),
   priority TEXT DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
   
   -- Ownership
@@ -95,6 +95,13 @@ CREATE TABLE tasks (
   
   -- Task type
   task_type TEXT DEFAULT 'personal' CHECK (task_type IN ('personal', 'business')),
+
+  -- Ensure team context matches task type
+  CONSTRAINT tasks_team_type_consistency CHECK (
+    (task_type = 'personal' AND team_id IS NULL)
+    OR
+    (task_type = 'business' AND team_id IS NOT NULL)
+  ),
   
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -125,31 +132,114 @@ CREATE POLICY "Users can view own personal tasks"
     task_type = 'personal' AND created_by = auth.uid()
   );
 
--- Business tasks: team members can see
-CREATE POLICY "Team members can view business tasks"
+-- Helper function to check if current user is an admin of a team
+CREATE OR REPLACE FUNCTION public.is_team_admin(team_uuid UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM team_members tm
+    WHERE tm.team_id = team_uuid
+      AND tm.user_id = auth.uid()
+      AND tm.role = 'admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Business tasks: team members see tasks assigned to them, unassigned tasks,
+-- tasks they created, and team admins can see all tasks in their teams.
+CREATE POLICY "Team members can view relevant business tasks"
   ON tasks FOR SELECT
   USING (
-    task_type = 'business' AND team_id IN (
-      SELECT team_id FROM team_members WHERE user_id = auth.uid()
+    task_type = 'business'
+    AND team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
+    AND (
+      public.is_team_admin(team_id)
+      OR created_by = auth.uid()
+      OR assignee_id = auth.uid()
+      OR assignee_id IS NULL
     )
   );
 
--- Users can create their own tasks
-CREATE POLICY "Users can create tasks"
+-- Users can create personal tasks for themselves
+CREATE POLICY "Users can create personal tasks"
   ON tasks FOR INSERT
-  WITH CHECK (created_by = auth.uid());
-
--- Users can update their own tasks or tasks assigned to them
-CREATE POLICY "Users can update own or assigned tasks"
-  ON tasks FOR UPDATE
-  USING (
-    created_by = auth.uid() OR assignee_id = auth.uid()
+  WITH CHECK (
+    created_by = auth.uid()
+    AND task_type = 'personal'
+    AND team_id IS NULL
+    AND assignee_id IS NULL
   );
 
--- Users can delete their own tasks
-CREATE POLICY "Users can delete own tasks"
+-- Team members can create business tasks in their teams
+CREATE POLICY "Team members can create business tasks"
+  ON tasks FOR INSERT
+  WITH CHECK (
+    created_by = auth.uid()
+    AND task_type = 'business'
+    AND team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
+    AND (
+      assignee_id IS NULL
+      OR EXISTS (
+        SELECT 1 FROM team_members tm
+        WHERE tm.team_id = tasks.team_id
+          AND tm.user_id = tasks.assignee_id
+      )
+    )
+  );
+
+-- Users can update their own personal tasks
+CREATE POLICY "Users can update own personal tasks"
+  ON tasks FOR UPDATE
+  USING (
+    task_type = 'personal' AND created_by = auth.uid()
+  )
+  WITH CHECK (
+    task_type = 'personal' AND created_by = auth.uid() AND team_id IS NULL AND assignee_id IS NULL
+  );
+
+-- Business tasks: creator/assignee/admin can update within their teams
+CREATE POLICY "Team members can update relevant business tasks"
+  ON tasks FOR UPDATE
+  USING (
+    task_type = 'business'
+    AND team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
+    AND (
+      public.is_team_admin(team_id)
+      OR created_by = auth.uid()
+      OR assignee_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    task_type = 'business'
+    AND team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
+    AND (
+      assignee_id IS NULL
+      OR EXISTS (
+        SELECT 1 FROM team_members tm
+        WHERE tm.team_id = tasks.team_id
+          AND tm.user_id = tasks.assignee_id
+      )
+    )
+  );
+
+-- Users can delete their own personal tasks
+CREATE POLICY "Users can delete own personal tasks"
   ON tasks FOR DELETE
-  USING (created_by = auth.uid());
+  USING (
+    task_type = 'personal' AND created_by = auth.uid()
+  );
+
+-- Business tasks: creator/admin can delete within their teams
+CREATE POLICY "Team members can delete relevant business tasks"
+  ON tasks FOR DELETE
+  USING (
+    task_type = 'business'
+    AND team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
+    AND (
+      public.is_team_admin(team_id)
+      OR created_by = auth.uid()
+    )
+  );
 
 -- 8. RLS POLICIES FOR COMPANIES & TEAMS
 -- ================================

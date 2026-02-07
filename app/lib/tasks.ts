@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Task, TaskSummary } from './types';
+import { Task, TaskStatus, TaskSummary } from './types';
 
 // Date utilities
 export const formatDate = (date: Date): string => {
@@ -26,30 +26,71 @@ export const isTaskOverdue = (task: Task): boolean => {
   return task.due_date < today;
 };
 
+const buildScopeAndDateOrFilter = (
+  userId: string,
+  teamIds: string[],
+  includeAllTeamTasks: boolean,
+  dateLogic: string
+): string => {
+  const personal = `and(created_by.eq.${userId},team_id.is.null,${dateLogic})`;
+
+  if (teamIds.length === 0) {
+    return personal;
+  }
+
+  const teamIdsList = `(${teamIds.join(',')})`;
+  const team = includeAllTeamTasks
+    ? `and(team_id.in.${teamIdsList},${dateLogic})`
+    : `and(team_id.in.${teamIdsList},or(assignee_id.eq.${userId},assignee_id.is.null,created_by.eq.${userId}),${dateLogic})`;
+
+  return `${personal},${team}`;
+};
+
 // Fetch tasks for a date range (typically a month)
 // Now includes both personal tasks and team tasks where user is a member
 export const fetchTasksForDateRange = async (
   userId: string,
   startDate: string,
   endDate: string,
-  teamIds: string[] = []
+  teamIds: string[] = [],
+  includeAllTeamTasks: boolean = false
 ): Promise<Task[]> => {
-  // Build query for personal tasks (created by user, no team)
+  const today = formatDate(new Date());
+  const includeCarryForward = startDate <= today;
+
+  // Tasks relevant to a range:
+  // - Tasks that overlap the range (single-day or multi-day)
+  // - PLUS overdue incomplete tasks that started/ended before the range (carry-forward, ONLY up to today)
+  //
+  // Overlap logic (without COALESCE):
+  //   (end_date is null AND due_date within range)
+  //   OR (end_date >= startDate AND due_date <= endDate)
+  // Carry-forward overdue:
+  //   status!=completed AND (end_date is null AND due_date < startDate)
+  //   OR status!=completed AND end_date < startDate
+  const overlapParts = [
+    `and(end_date.is.null,due_date.gte.${startDate})`,
+    `and(end_date.gte.${startDate})`,
+  ];
+
+  const carryForwardParts = includeCarryForward
+    ? [
+        `and(status.neq.completed,end_date.is.null,due_date.lt.${startDate})`,
+        `and(status.neq.completed,end_date.lt.${startDate})`,
+      ]
+    : [];
+
+  const dateLogic = [
+    `due_date.lte.${endDate},or(`,
+    [...overlapParts, ...carryForwardParts].join(','),
+    `)`,
+  ].join('');
+
   let query = supabase
     .from('tasks')
     .select('*')
-    .or(`due_date.gte.${startDate},end_date.gte.${startDate}`)
-    .or(`due_date.lte.${endDate},end_date.lte.${endDate}`)
+    .or(buildScopeAndDateOrFilter(userId, teamIds, includeAllTeamTasks, dateLogic))
     .order('due_date', { ascending: true });
-
-  if (teamIds.length > 0) {
-    // Include: personal tasks OR team tasks (assigned to user OR unassigned in user's teams)
-    const teamFilter = teamIds.map(id => `team_id.eq.${id}`).join(',');
-    query = query.or(`and(created_by.eq.${userId},team_id.is.null),and(team_id.not.is.null,or(${teamFilter}),or(assignee_id.eq.${userId},assignee_id.is.null))`);
-  } else {
-    // No teams - just personal tasks
-    query = query.eq('created_by', userId);
-  }
 
   const { data, error } = await query;
 
@@ -66,23 +107,37 @@ export const fetchTasksForDateRange = async (
 export const fetchTasksForDate = async (
   userId: string,
   date: string,
-  teamIds: string[] = []
+  teamIds: string[] = [],
+  includeAllTeamTasks: boolean = false
 ): Promise<Task[]> => {
+  const today = formatDate(new Date());
+  const includeCarryForward = date <= today;
+
+  // Tasks relevant to a date:
+  // - due_date == date (single-day)
+  // - due_date <= date <= end_date (multi-day)
+  // - overdue carry-forward (ONLY up to today): incomplete tasks with due/end before date
+  const dateLogicParts = [
+    `due_date.eq.${date}`,
+    `and(due_date.lte.${date},end_date.gte.${date})`,
+  ];
+
+  if (includeCarryForward) {
+    // Match the same logic as getTaskSummaryForDate - include all non-completed tasks
+    dateLogicParts.push(
+      `and(status.neq.completed,end_date.is.null,due_date.lt.${date})`,
+      `and(status.neq.completed,end_date.lt.${date})`
+    );
+  }
+
+  const dateLogic = `or(${dateLogicParts.join(',')})`;
+
   let query = supabase
     .from('tasks')
     .select('*')
-    .or(`due_date.eq.${date},and(due_date.lte.${date},end_date.gte.${date})`)
+    .or(buildScopeAndDateOrFilter(userId, teamIds, includeAllTeamTasks, dateLogic))
     .order('priority', { ascending: false })
     .order('created_at', { ascending: true });
-
-  if (teamIds.length > 0) {
-    // Include: personal tasks OR team tasks (assigned to user OR unassigned in user's teams)
-    const teamFilter = teamIds.map(id => `team_id.eq.${id}`).join(',');
-    query = query.or(`and(created_by.eq.${userId},team_id.is.null),and(team_id.not.is.null,or(${teamFilter}),or(assignee_id.eq.${userId},assignee_id.is.null))`);
-  } else {
-    // No teams - just personal tasks
-    query = query.eq('created_by', userId);
-  }
 
   const { data, error } = await query;
 
@@ -95,20 +150,40 @@ export const fetchTasksForDate = async (
 };
 
 // Get task summary (counts) for a specific date
-export const getTaskSummaryForDate = (tasks: Task[], date: string): TaskSummary => {
+export const getTaskSummaryForDate = (
+  tasks: Task[],
+  date: string,
+  options: { includeCarryForward?: boolean } = {}
+): TaskSummary => {
   const today = formatDate(new Date());
+  const { includeCarryForward = true } = options;
   
   const tasksForDate = tasks.filter((task) => {
-    // Single day task
+    const effectiveEnd = task.end_date || task.due_date;
+
+    // Carry-forward overdue tasks onto future dates
+    // Only roll over up to today (avoid pre-populating into future calendar dates)
+    if (
+      includeCarryForward &&
+      task.status !== 'completed' &&
+      effectiveEnd < date &&
+      date <= today
+    ) {
+      return true;
+    }
+
+    // Single-day task
     if (!task.end_date) {
       return task.due_date === date;
     }
+
     // Multi-day task
     return task.due_date <= date && task.end_date >= date;
   });
 
   const summary: TaskSummary = {
-    pending: 0,
+    new: 0,
+    in_progress: 0,
     completed: 0,
     overdue: 0,
   };
@@ -118,8 +193,10 @@ export const getTaskSummaryForDate = (tasks: Task[], date: string): TaskSummary 
       summary.completed++;
     } else if (task.due_date < today) {
       summary.overdue++;
+    } else if (task.status === 'in_progress') {
+      summary.in_progress++;
     } else {
-      summary.pending++;
+      summary.new++;
     }
   });
 
@@ -154,7 +231,7 @@ export const updateTask = async (
   // If marking as completed, set completed_at
   if (updates.status === 'completed') {
     updateData.completed_at = new Date().toISOString();
-  } else if (updates.status === 'pending') {
+  } else if (updates.status === 'new' || updates.status === 'in_progress') {
     updateData.completed_at = null;
   }
 
@@ -188,6 +265,10 @@ export const deleteTask = async (taskId: string): Promise<void> => {
 
 // Toggle task status
 export const toggleTaskStatus = async (task: Task): Promise<Task> => {
-  const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+  const newStatus: TaskStatus = task.status === 'completed' ? 'new' : 'completed';
   return updateTask(task.id, { status: newStatus });
+};
+
+export const setTaskStatus = async (task: Task, status: TaskStatus): Promise<Task> => {
+  return updateTask(task.id, { status });
 };

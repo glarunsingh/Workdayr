@@ -201,26 +201,27 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       if (teamError) throw teamError;
 
       // Add the creator as an admin of the default team
-      const { error: memberError } = await supabase
+      const { data: membership, error: memberError } = await supabase
         .from('team_members')
         .insert({
           team_id: defaultTeam.id,
           user_id: session.user.id,
           role: 'admin',
-        });
+        })
+        .select()
+        .single();
 
       if (memberError) throw memberError;
 
       // Update local state
       setCompany(newCompany);
       setTeams([defaultTeam]);
-      setTeamMembers([{
-        id: '', // Will be set by DB
-        team_id: defaultTeam.id,
-        user_id: session.user.id,
-        role: 'admin',
-        joined_at: new Date().toISOString(),
-      }]);
+      if (membership) {
+        setTeamMembers([membership]);
+      } else {
+        // Fallback: refresh from DB
+        await fetchTeamsAndMembers(newCompany.id);
+      }
 
       return { company: newCompany, error: null };
     } catch (error) {

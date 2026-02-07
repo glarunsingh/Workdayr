@@ -1,10 +1,19 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, Platform } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import { useCompany } from '@/lib/company';
 import { createTask } from '@/lib/tasks';
 import TaskForm, { TaskFormValues } from '@/components/tasks/TaskForm';
+
+// Cross-platform alert helper
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
 
 export default function NewTaskScreen() {
   const router = useRouter();
@@ -18,11 +27,14 @@ export default function NewTaskScreen() {
   const isBusinessMode = !!company;
 
   // Pre-fill due date if passed from day view
-  const initialValues = date ? { due_date: date } : undefined;
+  const initialValues = date ? { due_date: date, status: 'new' as const } : { status: 'new' as const };
 
   const handleSubmit = async (values: TaskFormValues) => {
+    console.log('handleSubmit called with values:', values);
+    
     if (!session?.user?.id) {
-      Alert.alert('Error', 'You must be logged in to create a task');
+      console.error('No session user id');
+      showAlert('Error', 'You must be logged in to create a task');
       return;
     }
 
@@ -34,7 +46,7 @@ export default function NewTaskScreen() {
         due_date: values.due_date,
         end_date: values.end_date,
         priority: values.priority,
-        status: 'pending' as const,
+        status: values.status,
         created_by: session.user.id,
         assignee_id: values.assignee_id,
         team_id: values.team_id,
@@ -43,20 +55,17 @@ export default function NewTaskScreen() {
       
       console.log('Creating task with data:', taskData);
       
-      await createTask(taskData);
+      const createdTask = await createTask(taskData);
 
-      console.log('Task created successfully');
-      
-      // Navigate back with success
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace('/(tabs)');
-      }
+      console.log('Task created successfully:', createdTask);
+
+      // Navigate back - go to the day view for the due date with an in-app flash message
+      const flash = encodeURIComponent(`Task "${values.title}" created`);
+      router.replace(`/day/${values.due_date}?flash=${flash}`);
     } catch (error: any) {
       console.error('Failed to create task:', error);
       const errorMessage = error?.message || error?.toString() || 'Unknown error';
-      Alert.alert('Error', `Failed to create task: ${errorMessage}`);
+      showAlert('Error', `Failed to create task: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
