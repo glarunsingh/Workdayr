@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { View, StyleSheet, Platform, ViewStyle } from 'react-native';
 import { useResponsive, getMaxContentWidth } from '@/lib/responsive';
+import { useAppTheme } from '@/lib/theme';
 
 interface ResponsiveContainerProps {
   children: ReactNode;
@@ -58,13 +59,14 @@ interface ResponsivePageProps {
 export function ResponsivePage({
   children,
   style,
-  backgroundColor = '#f5f5f5',
+  backgroundColor,
 }: ResponsivePageProps) {
   const { screenSize, isWeb } = useResponsive();
+  const { colors } = useAppTheme();
 
   const containerStyle: ViewStyle[] = [
     styles.page,
-    { backgroundColor },
+    { backgroundColor: backgroundColor ?? colors.background },
   ];
   
   if (style) {

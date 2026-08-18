@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal, View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import TaskForm, { TaskFormValues } from './TaskForm';
-import { Team, TeamMemberWithProfile, Task } from '@/lib/types';
+import { Task } from '@/lib/types';
 import { useAppTheme } from '@/lib/theme';
 
 interface TaskModalProps {
@@ -13,9 +13,6 @@ interface TaskModalProps {
   isLoading?: boolean;
   onClose: () => void;
   onSubmit: (values: TaskFormValues) => Promise<void>;
-  isBusinessMode?: boolean;
-  teams?: Team[];
-  assignableMembers?: TeamMemberWithProfile[];
 }
 
 export default function TaskModal({
@@ -26,9 +23,6 @@ export default function TaskModal({
   isLoading = false,
   onClose,
   onSubmit,
-  isBusinessMode = false,
-  teams = [],
-  assignableMembers = [],
 }: TaskModalProps) {
   const { colors, spacing, radius } = useAppTheme();
 
@@ -78,9 +72,6 @@ export default function TaskModal({
               onSubmit={onSubmit}
               submitLabel={submitLabel}
               isLoading={isLoading}
-              isBusinessMode={isBusinessMode}
-              teams={teams}
-              assignableMembers={assignableMembers}
             />
           </View>
         </View>

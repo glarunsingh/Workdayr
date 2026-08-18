@@ -85,12 +85,37 @@ Even without active investors, these pain points justify the POC and future pitc
   - Deadline
   - Status (New, In Progress, Completed)
 
-### 3.2 Multi-Day Tasks & Overdue Logic
-- Tasks spanning multiple days appear on all relevant dates
-- If a task is not completed on the due date:
-  - It continues to appear on subsequent days until completed (shown as Past Due)
-  - Marked as **Past Due**
-  - Visually distinguished from other tasks
+### 3.2 Multi-Day Tasks & Overdue / Past Due Logic
+
+**Scheduled Range Display**
+- Every task has a `due_date` (start). Multi-day tasks also have an `end_date`.
+- A task appears on **every date from `due_date` through `end_date`** (inclusive).
+- Single-day tasks (`end_date` is null) appear only on `due_date`.
+
+**Carry-Forward (Past Due) Rules**
+- The **effective end** of a task is `end_date` if set, otherwise `due_date`.
+- If a task is **not completed** by its effective end date, it becomes **Past Due**.
+- A Past Due task **continues to appear on every subsequent day up to and including today's date**.
+- Past Due tasks are **never shown on future dates** (dates after today).
+- Once the task is marked as **Completed**, carry-forward stops immediately and it no longer appears on dates beyond its scheduled range.
+
+**Visual Treatment**
+- Past Due tasks display a prominent **"Past Due" badge** (danger/red color).
+- Past Due tasks are visually distinguished from New, In Progress, and Completed tasks.
+- On the monthly calendar, dates with Past Due tasks show a **red indicator dot**.
+
+**Example**
+> Task created on Feb 12, multi-day spanning Feb 12–13 (`end_date` = Feb 13). Never completed. Today = Feb 17.
+>
+> | Date   | Appears? | Status      |
+> |--------|----------|-------------|
+> | Feb 12 | Yes      | Normal      |
+> | Feb 13 | Yes      | Normal      |
+> | Feb 14 | Yes      | Past Due    |
+> | Feb 15 | Yes      | Past Due    |
+> | Feb 16 | Yes      | Past Due    |
+> | Feb 17 | Yes      | Past Due    |
+> | Feb 18 | **No**   | —           |
 
 ### 3.3 Cross-Platform Sync
 - Real-time sync across:

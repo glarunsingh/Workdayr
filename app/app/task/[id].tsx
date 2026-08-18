@@ -1,26 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, ActivityIndicator, Text } from 'react-native';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/lib/auth';
-import { useCompany } from '@/lib/company';
 import { updateTask, deleteTask } from '@/lib/tasks';
 import { supabase } from '@/lib/supabase';
 import { Task } from '@/lib/types';
 import TaskForm, { TaskFormValues } from '@/components/tasks/TaskForm';
+import { useAppTheme, AppColors } from '@/lib/theme';
 
 export default function EditTaskScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { company, teams, teamMembersWithProfiles } = useCompany();
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   
   const [task, setTask] = useState<Task | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Check if we're in business mode (user has a company)
-  const isBusinessMode = !!company;
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -70,9 +68,9 @@ export default function EditTaskScreen() {
         end_date: values.end_date,
         status: values.status,
         priority: values.priority,
-        task_type: values.task_type,
-        team_id: values.team_id,
-        assignee_id: values.assignee_id,
+        task_type: 'personal',
+        team_id: null,
+        assignee_id: null,
       });
 
       // Navigate back with success
@@ -110,8 +108,7 @@ export default function EditTaskScreen() {
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
-        <Stack.Screen options={{ title: 'Edit Task' }} />
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.info} />
       </View>
     );
   }
@@ -119,7 +116,6 @@ export default function EditTaskScreen() {
   if (error || !task) {
     return (
       <View style={styles.centerContainer}>
-        <Stack.Screen options={{ title: 'Edit Task' }} />
         <Text style={styles.errorText}>{error || 'Task not found'}</Text>
       </View>
     );
@@ -127,12 +123,6 @@ export default function EditTaskScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: 'Edit Task',
-          headerBackTitle: 'Cancel',
-        }}
-      />
       <TaskForm
         initialValues={{
           title: task.title,
@@ -141,36 +131,30 @@ export default function EditTaskScreen() {
           end_date: task.end_date,
           status: task.status,
           priority: task.priority,
-          task_type: task.task_type,
-          team_id: task.team_id,
-          assignee_id: task.assignee_id,
         }}
         onSubmit={handleSubmit}
         onDelete={handleDelete}
         submitLabel="Save Changes"
         isLoading={isSaving}
-        isBusinessMode={isBusinessMode}
-        teams={teams}
-        assignableMembers={teamMembersWithProfiles}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   errorText: {
     fontSize: 16,
-    color: '#FF3B30',
+    color: colors.danger,
     textAlign: 'center',
     paddingHorizontal: 20,
   },

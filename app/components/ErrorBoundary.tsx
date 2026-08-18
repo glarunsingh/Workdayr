@@ -1,6 +1,7 @@
 import React, { Component, ReactNode } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Appearance } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import { appColors, useAppTheme } from '@/lib/theme';
 
 interface Props {
   children: ReactNode;
@@ -57,26 +58,29 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
+      const scheme = Appearance.getColorScheme() ?? 'light';
+      const colors = appColors[scheme];
+
       // Default error UI
       return (
-        <View style={styles.container}>
-          <FontAwesome name="exclamation-triangle" size={48} color="#FF3B30" />
-          <Text style={styles.title}>Something went wrong</Text>
-          <Text style={styles.message}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <FontAwesome name="exclamation-triangle" size={48} color={colors.danger} />
+          <Text style={[styles.title, { color: colors.text }]}>Something went wrong</Text>
+          <Text style={[styles.message, { color: colors.textMuted }]}>
             We're sorry, but something unexpected happened. Please try again.
           </Text>
           
-          <TouchableOpacity style={styles.retryButton} onPress={this.handleRetry}>
-            <FontAwesome name="refresh" size={16} color="#fff" />
-            <Text style={styles.retryText}>Try Again</Text>
+          <TouchableOpacity style={[styles.retryButton, { backgroundColor: colors.info }]} onPress={this.handleRetry}>
+            <FontAwesome name="refresh" size={16} color={colors.onPrimary} />
+            <Text style={[styles.retryText, { color: colors.onPrimary }]}>Try Again</Text>
           </TouchableOpacity>
 
           {__DEV__ && this.state.error && (
-            <ScrollView style={styles.errorDetails}>
-              <Text style={styles.errorTitle}>Error Details (Dev Only):</Text>
-              <Text style={styles.errorText}>{this.state.error.toString()}</Text>
+            <ScrollView style={[styles.errorDetails, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.errorTitle, { color: colors.danger }]}>Error Details (Dev Only):</Text>
+              <Text style={[styles.errorText, { color: colors.text }]}>{this.state.error.toString()}</Text>
               {this.state.errorInfo && (
-                <Text style={styles.errorStack}>
+                <Text style={[styles.errorStack, { color: colors.textMuted }]}>
                   {this.state.errorInfo.componentStack}
                 </Text>
               )}
@@ -102,13 +106,14 @@ export function InlineError({
   message = 'Failed to load', 
   onRetry 
 }: InlineErrorProps) {
+  const { colors } = useAppTheme();
   return (
-    <View style={styles.inlineContainer}>
-      <FontAwesome name="exclamation-circle" size={20} color="#FF9500" />
-      <Text style={styles.inlineMessage}>{message}</Text>
+    <View style={[styles.inlineContainer, { backgroundColor: `${colors.warning}20` }]}>
+      <FontAwesome name="exclamation-circle" size={20} color={colors.warning} />
+      <Text style={[styles.inlineMessage, { color: colors.text }]}>{message}</Text>
       {onRetry && (
         <TouchableOpacity onPress={onRetry}>
-          <Text style={styles.inlineRetry}>Retry</Text>
+          <Text style={[styles.inlineRetry, { color: colors.info }]}>Retry</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -129,14 +134,15 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ icon = 'inbox', title, message, action }: EmptyStateProps) {
+  const { colors } = useAppTheme();
   return (
     <View style={styles.emptyContainer}>
-      <FontAwesome name={icon} size={48} color="#ccc" />
-      <Text style={styles.emptyTitle}>{title}</Text>
-      {message && <Text style={styles.emptyMessage}>{message}</Text>}
+      <FontAwesome name={icon} size={48} color={colors.textDisabled} />
+      <Text style={[styles.emptyTitle, { color: colors.textMuted }]}>{title}</Text>
+      {message && <Text style={[styles.emptyMessage, { color: colors.textSubtle }]}>{message}</Text>}
       {action && (
-        <TouchableOpacity style={styles.emptyAction} onPress={action.onPress}>
-          <Text style={styles.emptyActionText}>{action.label}</Text>
+        <TouchableOpacity style={[styles.emptyAction, { backgroundColor: colors.info }]} onPress={action.onPress}>
+          <Text style={[styles.emptyActionText, { color: colors.onPrimary }]}>{action.label}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -149,32 +155,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
-    backgroundColor: '#f5f5f5',
   },
   title: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
     marginTop: 16,
     marginBottom: 8,
   },
   message: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 24,
   },
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
   },
   retryText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -182,24 +183,20 @@ const styles = StyleSheet.create({
     marginTop: 24,
     maxHeight: 200,
     width: '100%',
-    backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
   },
   errorTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FF3B30',
     marginBottom: 8,
   },
   errorText: {
     fontSize: 12,
-    color: '#333',
     fontFamily: 'monospace',
   },
   errorStack: {
     fontSize: 10,
-    color: '#666',
     fontFamily: 'monospace',
     marginTop: 8,
   },
@@ -208,18 +205,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#FFF3E0',
     borderRadius: 8,
     gap: 8,
   },
   inlineMessage: {
     flex: 1,
     fontSize: 14,
-    color: '#E65100',
   },
   inlineRetry: {
     fontSize: 14,
-    color: '#007AFF',
     fontWeight: '600',
   },
   // Empty state styles
@@ -232,13 +226,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#666',
     marginTop: 16,
     textAlign: 'center',
   },
   emptyMessage: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     marginTop: 8,
   },
@@ -246,11 +238,9 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#007AFF',
     borderRadius: 8,
   },
   emptyActionText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },

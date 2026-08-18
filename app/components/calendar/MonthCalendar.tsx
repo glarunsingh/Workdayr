@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import CalendarHeader from './CalendarHeader';
 import CalendarGrid from './CalendarGrid';
 import { useSettings } from '@/lib/settings';
 import { useAuth } from '@/lib/auth';
-import { useCompany } from '@/lib/company';
 import { Task } from '@/lib/types';
 import { fetchTasksForDateRange, getMonthDateRange, formatDate } from '@/lib/tasks';
 import { useTaskRealtime } from '@/lib/realtime';
+import { useAppTheme } from '@/lib/theme';
 
 // Get today's date fresh each time the component initializes
 const getToday = () => new Date();
@@ -17,16 +17,13 @@ export default function MonthCalendar() {
   const router = useRouter();
   const { session } = useAuth();
   const { weekStartsOn } = useSettings();
-  const { teams, isAdmin } = useCompany();
+  const { colors } = useAppTheme();
   
   // Use a function initializer to ensure we get the current date at mount time
   const [currentDate, setCurrentDate] = useState(() => getToday());
   const [selectedDate, setSelectedDate] = useState<string | null>(() => formatDate(getToday()));
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Get team IDs for fetching team tasks
-  const teamIds = useMemo(() => teams.map((t) => t.id), [teams]);
 
   // Reset to today's date when user session changes (e.g., on login)
   useEffect(() => {
@@ -53,9 +50,7 @@ export default function MonthCalendar() {
       const fetchedTasks = await fetchTasksForDateRange(
         session.user.id,
         formatDate(extendedStart),
-        formatDate(extendedEnd),
-        teamIds,
-        isAdmin
+        formatDate(extendedEnd)
       );
       setTasks(fetchedTasks);
     } catch (error) {
@@ -63,7 +58,7 @@ export default function MonthCalendar() {
     } finally {
       setLoading(false);
     }
-  }, [currentDate, session?.user?.id, teamIds]);
+  }, [currentDate, session?.user?.id]);
 
   useEffect(() => {
     loadTasks();
@@ -93,7 +88,7 @@ export default function MonthCalendar() {
   );
 
   // Subscribe to real-time task changes
-  useTaskRealtime(session?.user?.id, teamIds, handleTaskChange, isAdmin);
+  useTaskRealtime(session?.user?.id, [], handleTaskChange, false);
 
   const handlePrevMonth = () => {
     setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -126,7 +121,7 @@ export default function MonthCalendar() {
       
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#000" />
+          <ActivityIndicator size="large" color={colors.text} />
         </View>
       ) : (
         <CalendarGrid
@@ -144,7 +139,6 @@ export default function MonthCalendar() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   loadingContainer: {
     flex: 1,

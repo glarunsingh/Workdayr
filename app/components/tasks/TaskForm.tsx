@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FontAwesome } from '@expo/vector-icons';
-import { Task, TaskPriority, Team, TeamMemberWithProfile, TaskStatus, TaskType } from '@/lib/types';
+import { Task, TaskPriority, TaskStatus } from '@/lib/types';
 import { formatDate } from '@/lib/tasks';
 import { useAppTheme } from '@/lib/theme';
 
@@ -22,10 +22,6 @@ interface TaskFormProps {
   onDelete?: () => void;
   submitLabel: string;
   isLoading?: boolean;
-  // Business mode props
-  isBusinessMode?: boolean;
-  teams?: Team[];
-  assignableMembers?: TeamMemberWithProfile[];
 }
 
 export interface TaskFormValues {
@@ -35,9 +31,6 @@ export interface TaskFormValues {
   end_date: string | null;
   status: TaskStatus;
   priority: TaskPriority;
-  task_type: TaskType;
-  team_id: string | null;
-  assignee_id: string | null;
 }
 
 export default function TaskForm({
@@ -46,9 +39,6 @@ export default function TaskForm({
   onDelete,
   submitLabel,
   isLoading = false,
-  isBusinessMode = false,
-  teams = [],
-  assignableMembers = [],
 }: TaskFormProps) {
   const { colors, spacing, radius, typography } = useAppTheme();
 
@@ -187,13 +177,6 @@ export default function TaskForm({
   const [status, setStatus] = useState<TaskStatus>(initialValues?.status || 'new');
   const [isMultiDay, setIsMultiDay] = useState(!!initialValues?.end_date);
   
-  // Business mode state
-  const [taskType, setTaskType] = useState<TaskType>(initialValues?.task_type || 'personal');
-  const [teamId, setTeamId] = useState<string | null>(initialValues?.team_id || null);
-  const [assigneeId, setAssigneeId] = useState<string | null>(initialValues?.assignee_id || null);
-  const [showTeamPicker, setShowTeamPicker] = useState(false);
-  const [showAssigneePicker, setShowAssigneePicker] = useState(false);
-
   // Date picker visibility states
   const [showDueDatePicker, setShowDueDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
@@ -309,15 +292,6 @@ export default function TaskForm({
   const [errors, setErrors] = useState<{ title?: string; endDate?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get filtered assignable members for selected team
-  const filteredMembers = teamId 
-    ? assignableMembers.filter(m => m.team_id === teamId)
-    : assignableMembers;
-
-  // Get selected team and assignee for display
-  const selectedTeam = teams.find(t => t.id === teamId);
-  const selectedAssignee = assignableMembers.find(m => m.user_id === assigneeId);
-
   const validate = (): boolean => {
     const newErrors: { title?: string; endDate?: string } = {};
 
@@ -350,9 +324,6 @@ export default function TaskForm({
       end_date: isMultiDay && endDate ? formatDate(endDate) : null,
       status,
       priority,
-      task_type: isBusinessMode && teamId ? 'business' : 'personal',
-      team_id: isBusinessMode ? teamId : null,
-      assignee_id: isBusinessMode ? assigneeId : null,
     };
 
     try {
@@ -626,138 +597,6 @@ export default function TaskForm({
         </View>
       )}
 
-      {/* Team Selector (Business Mode Only) */}
-      {isBusinessMode && teams.length > 0 && (
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: colors.text }]}>Team (Optional)</Text>
-          <TouchableOpacity
-            style={[styles.selectorButton, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.sm }]}
-            onPress={() => setShowTeamPicker(!showTeamPicker)}
-          >
-            <FontAwesome name="users" size={16} color={colors.primary} />
-            <Text style={[styles.selectorText, { color: colors.text }]}>
-              {selectedTeam ? selectedTeam.name : 'Personal Task'}
-            </Text>
-            <FontAwesome 
-              name={showTeamPicker ? "chevron-up" : "chevron-down"} 
-              size={12} 
-              color={colors.textMuted} 
-            />
-          </TouchableOpacity>
-          
-          {showTeamPicker && (
-            <View style={[styles.pickerOptions, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.sm }]}>
-              <TouchableOpacity
-                style={[
-                  styles.pickerOption,
-                  { borderBottomColor: colors.border },
-                  !teamId && { backgroundColor: `${colors.primary}14` },
-                ]}
-                onPress={() => {
-                  setTeamId(null);
-                  setAssigneeId(null);
-                  setShowTeamPicker(false);
-                }}
-              >
-                <Text style={[
-                  styles.pickerOptionText,
-                  { color: colors.text },
-                  !teamId && { color: colors.primary, fontWeight: '600' },
-                ]}>Personal Task</Text>
-              </TouchableOpacity>
-              {teams.map((team) => (
-                <TouchableOpacity
-                  key={team.id}
-                  style={[
-                    styles.pickerOption,
-                    { borderBottomColor: colors.border },
-                    teamId === team.id && { backgroundColor: `${colors.primary}14` },
-                  ]}
-                  onPress={() => {
-                    setTeamId(team.id);
-                    setAssigneeId(null); // Reset assignee when team changes
-                    setShowTeamPicker(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.pickerOptionText,
-                    { color: colors.text },
-                    teamId === team.id && { color: colors.primary, fontWeight: '600' },
-                  ]}>{team.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* Assignee Selector (Business Mode Only, when team selected) */}
-      {isBusinessMode && teamId && filteredMembers.length > 0 && (
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: colors.text }]}>Assign To (Optional)</Text>
-          <TouchableOpacity
-            style={[styles.selectorButton, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.sm }]}
-            onPress={() => setShowAssigneePicker(!showAssigneePicker)}
-          >
-            <FontAwesome name="user" size={16} color={colors.primary} />
-            <Text style={[styles.selectorText, { color: colors.text }]}>
-              {selectedAssignee?.profile 
-                ? (selectedAssignee.profile.full_name || selectedAssignee.profile.email || 'Team Member')
-                : 'Unassigned'}
-            </Text>
-            <FontAwesome 
-              name={showAssigneePicker ? "chevron-up" : "chevron-down"} 
-              size={12} 
-              color={colors.textMuted} 
-            />
-          </TouchableOpacity>
-          
-          {showAssigneePicker && (
-            <View style={[styles.pickerOptions, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.sm }]}>
-              <TouchableOpacity
-                style={[
-                  styles.pickerOption,
-                  { borderBottomColor: colors.border },
-                  !assigneeId && { backgroundColor: `${colors.primary}14` },
-                ]}
-                onPress={() => {
-                  setAssigneeId(null);
-                  setShowAssigneePicker(false);
-                }}
-              >
-                <Text style={[
-                  styles.pickerOptionText,
-                  { color: colors.text },
-                  !assigneeId && { color: colors.primary, fontWeight: '600' },
-                ]}>Unassigned</Text>
-              </TouchableOpacity>
-              {filteredMembers.map((member) => (
-                <TouchableOpacity
-                  key={member.id}
-                  style={[
-                    styles.pickerOption,
-                    { borderBottomColor: colors.border },
-                    assigneeId === member.user_id && { backgroundColor: `${colors.primary}14` },
-                  ]}
-                  onPress={() => {
-                    setAssigneeId(member.user_id);
-                    setShowAssigneePicker(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.pickerOptionText,
-                    { color: colors.text },
-                    assigneeId === member.user_id && { color: colors.primary, fontWeight: '600' },
-                  ]}>
-                    {member.profile?.full_name || member.profile?.email || 'Team Member'}
-                    {member.role === 'admin' ? ' (Admin)' : ''}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-      )}
 
       {/* Priority Selector */}
       <View style={styles.field}>
@@ -906,36 +745,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-  },
-  // Selector styles for team and assignee
-  selectorButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  selectorText: {
-    flex: 1,
-    fontSize: 16,
-    marginLeft: 10,
-  },
-  pickerOptions: {
-    marginTop: 8,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  pickerOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-  },
-  pickerOptionSelected: {
-  },
-  pickerOptionText: {
-    fontSize: 16,
-  },
-  pickerOptionTextSelected: {
   },
   submitButton: {
     paddingVertical: 16,

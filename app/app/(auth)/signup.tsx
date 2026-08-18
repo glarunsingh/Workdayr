@@ -5,13 +5,15 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Alert,
 } from 'react-native';
 import { Link, router } from 'expo-router';
+import { FontAwesome } from '@expo/vector-icons';
 import { useAuth } from '../../lib/auth';
+import { useResponsive } from '../../lib/responsive';
+import { useAppTheme } from '../../lib/theme';
+import AuthLayout from '../../components/AuthLayout';
 
 export default function SignupScreen() {
   const [fullName, setFullName] = useState('');
@@ -19,21 +21,28 @@ export default function SignupScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { signUp } = useAuth();
+  const { isMobile } = useResponsive();
+  const { colors, common } = useAppTheme();
 
   const handleSignup = async () => {
+    setErrorMessage(null);
+
     if (!fullName || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setErrorMessage('Please fill in all fields');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      setErrorMessage('Passwords do not match');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      setErrorMessage('Password must be at least 6 characters');
       return;
     }
 
@@ -42,7 +51,7 @@ export default function SignupScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Signup Failed', error.message);
+      setErrorMessage(error.message);
     } else {
       Alert.alert(
         'Account Created',
@@ -53,141 +62,218 @@ export default function SignupScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.content}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join Workdayr today</Text>
+    <AuthLayout>
+      <View style={[styles.formWrapper, !isMobile && styles.formWrapperDesktop]}>
+        <View style={styles.formInner}>
+          <Text style={[styles.heading, { color: colors.text }]}>Create account</Text>
+          <Text style={[styles.subheading, { color: colors.textSubtle }]}>
+            Get started with Workdayr
+          </Text>
 
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            placeholderTextColor="#999"
-            value={fullName}
-            onChangeText={setFullName}
-            autoComplete="name"
-          />
+          {errorMessage && (
+            <View style={common.errorContainer}>
+              <Text style={[common.errorText, styles.errorTextCenter]}>
+                {errorMessage}
+              </Text>
+            </View>
+          )}
 
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-          />
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={common.inputLabel}>Full Name</Text>
+              <TextInput
+                style={common.input}
+                placeholder="Jane Doe"
+                placeholderTextColor={colors.textDisabled}
+                value={fullName}
+                onChangeText={(text) => {
+                  setFullName(text);
+                  setErrorMessage(null);
+                }}
+                autoComplete="name"
+              />
+            </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#999"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoComplete="new-password"
-          />
+            <View style={styles.inputGroup}>
+              <Text style={common.inputLabel}>Email</Text>
+              <TextInput
+                style={common.input}
+                placeholder="you@example.com"
+                placeholderTextColor={colors.textDisabled}
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setErrorMessage(null);
+                }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+              />
+            </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#999"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            autoComplete="new-password"
-          />
+            <View style={styles.inputGroup}>
+              <Text style={common.inputLabel}>Password</Text>
+              <View
+                style={[
+                  styles.passwordContainer,
+                  { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+                ]}
+              >
+                <TextInput
+                  style={[styles.passwordInput, { color: colors.text }]}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.textDisabled}
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    setErrorMessage(null);
+                  }}
+                  secureTextEntry={!showPassword}
+                  autoComplete="new-password"
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <FontAwesome
+                    name={showPassword ? 'eye' : 'eye-slash'}
+                    size={18}
+                    color={colors.textSubtle}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSignup}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Create Account</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+            <View style={styles.inputGroup}>
+              <Text style={common.inputLabel}>Confirm Password</Text>
+              <View
+                style={[
+                  styles.passwordContainer,
+                  { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+                ]}
+              >
+                <TextInput
+                  style={[styles.passwordInput, { color: colors.text }]}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.textDisabled}
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    setErrorMessage(null);
+                  }}
+                  secureTextEntry={!showConfirmPassword}
+                  autoComplete="new-password"
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <FontAwesome
+                    name={showConfirmPassword ? 'eye' : 'eye-slash'}
+                    size={18}
+                    color={colors.textSubtle}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
-          <Link href="/(auth)/login" asChild>
-            <TouchableOpacity>
-              <Text style={styles.link}>Sign In</Text>
+            <TouchableOpacity
+              style={[common.buttonPrimary, styles.buttonMarginTop, loading && common.buttonDisabled]}
+              onPress={handleSignup}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.onPrimary} />
+              ) : (
+                <Text style={common.buttonPrimaryText}>Create Account</Text>
+              )}
             </TouchableOpacity>
-          </Link>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={[styles.footerText, { color: colors.textSubtle }]}>
+              Already have an account?{' '}
+            </Text>
+            <Link href="/(auth)/login" asChild>
+              <TouchableOpacity>
+                <Text style={[styles.link, { color: colors.text }]}>Sign In</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  content: {
+  formWrapper: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
+    paddingVertical: 32,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 8,
+  formWrapperDesktop: {
+    paddingHorizontal: 56,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+  formInner: {
+    maxWidth: 400,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  heading: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 6,
+    letterSpacing: -0.5,
+  },
+  subheading: {
+    fontSize: 15,
     marginBottom: 32,
+    letterSpacing: 0.1,
   },
   form: {
-    gap: 16,
+    gap: 18,
   },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
+  inputGroup: {
+    gap: 6,
   },
-  button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    padding: 16,
+  passwordContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    borderRadius: 8,
+    borderWidth: 1,
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     fontSize: 16,
-    fontWeight: '600',
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonMarginTop: {
+    marginTop: 4,
+  },
+  errorTextCenter: {
+    textAlign: 'center',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: 28,
   },
   footerText: {
-    color: '#666',
     fontSize: 14,
   },
   link: {
-    color: '#007AFF',
     fontSize: 14,
     fontWeight: '600',
   },

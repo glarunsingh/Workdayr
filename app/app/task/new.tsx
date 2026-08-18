@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Alert, Platform } from 'react-native';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/lib/auth';
-import { useCompany } from '@/lib/company';
 import { createTask } from '@/lib/tasks';
 import TaskForm, { TaskFormValues } from '@/components/tasks/TaskForm';
+import { useAppTheme, AppColors } from '@/lib/theme';
 
 // Cross-platform alert helper
 const showAlert = (title: string, message: string) => {
@@ -19,12 +19,10 @@ export default function NewTaskScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const { date } = useLocalSearchParams<{ date?: string }>();
-  const { company, teams, teamMembersWithProfiles } = useCompany();
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   
   const [isLoading, setIsLoading] = useState(false);
-
-  // Check if we're in business mode (user has a company)
-  const isBusinessMode = !!company;
 
   // Pre-fill due date if passed from day view
   const initialValues = date ? { due_date: date, status: 'new' as const } : { status: 'new' as const };
@@ -48,9 +46,9 @@ export default function NewTaskScreen() {
         priority: values.priority,
         status: values.status,
         created_by: session.user.id,
-        assignee_id: values.assignee_id,
-        team_id: values.team_id,
-        task_type: values.task_type,
+        assignee_id: null,
+        team_id: null,
+        task_type: 'personal',
       };
       
       console.log('Creating task with data:', taskData);
@@ -73,28 +71,19 @@ export default function NewTaskScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: 'New Task',
-          headerBackTitle: 'Cancel',
-        }}
-      />
       <TaskForm
         initialValues={initialValues}
         onSubmit={handleSubmit}
         submitLabel="Create Task"
         isLoading={isLoading}
-        isBusinessMode={isBusinessMode}
-        teams={teams}
-        assignableMembers={teamMembersWithProfiles}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
 });

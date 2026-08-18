@@ -1,10 +1,9 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack, useFocusEffect } from 'expo-router';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import { TaskList, TaskModal } from '@/components/tasks';
 import { useAuth } from '@/lib/auth';
-import { useCompany } from '@/lib/company';
 import { Task } from '@/lib/types';
 import { createTask, fetchTasksForDate, toggleTaskStatus, setTaskStatus, formatDate } from '@/lib/tasks';
 import type { TaskFormValues } from '@/components/tasks/TaskForm';
@@ -29,11 +28,33 @@ const isToday = (dateString: string): boolean => {
   return dateString === today;
 };
 
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
+
+const formatErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object') {
+    const maybeMessage = (error as { message?: string }).message;
+    if (typeof maybeMessage === 'string') return maybeMessage;
+    try {
+      return JSON.stringify(error, Object.getOwnPropertyNames(error));
+    } catch {
+      return 'Unknown error';
+    }
+  }
+  return 'Unknown error';
+};
+
 export default function DayViewScreen() {
   const { date, flash } = useLocalSearchParams<{ date: string; flash?: string | string[] }>();
   const router = useRouter();
   const { session } = useAuth();
-  const { teams, teamMembersWithProfiles, isAdmin } = useCompany();
   const { colors, scheme } = useAppTheme();
   
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -51,79 +72,21 @@ export default function DayViewScreen() {
     return () => clearTimeout(timeoutId);
   }, [flash]);
 
-  // Build name lookup maps for display
-  const teamNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    teams.forEach((team) => {
-      map[team.id] = team.name;
-    });
-    return map;
-  }, [teams]);
-
-  const assigneeNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    teamMembersWithProfiles.forEach((member) => {
-      if (member.profile && !map[member.user_id]) {
-        map[member.user_id] = member.profile.full_name || member.profile.email || 'Team Member';
-      }
-    });
-    return map;
-  }, [teamMembersWithProfiles]);
-
-  // Get team IDs for fetching team tasks
-  const teamIds = useMemo(() => teams.map((t) => t.id), [teams]);
-
-  // Filter state: 'all' | 'mine' | specific user_id
-  const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
-  const [focusedFilter, setFocusedFilter] = useState<string | null>(null);
-
-  // Build filter options from unique assignees in tasks
-  const filterOptions = useMemo(() => {
-    const options: { value: string; label: string }[] = [
-      { value: 'all', label: 'All Tasks' },
-      { value: 'mine', label: 'My Tasks' },
-    ];
-    
-    // Add unique assignees from team members
-    const addedUserIds = new Set<string>();
-    teamMembersWithProfiles.forEach((member) => {
-      if (!addedUserIds.has(member.user_id) && member.user_id !== session?.user?.id) {
-        addedUserIds.add(member.user_id);
-        const name = member.profile?.full_name || member.profile?.email || 'Team Member';
-        options.push({ value: member.user_id, label: name });
-      }
-    });
-    
-    return options;
-  }, [teamMembersWithProfiles, session?.user?.id]);
-
-  // Filter tasks based on selected filter
-  const filteredTasks = useMemo(() => {
-    if (assigneeFilter === 'all') {
-      return tasks;
-    }
-    if (assigneeFilter === 'mine') {
-      return tasks.filter(
-        (t) => t.created_by === session?.user?.id || t.assignee_id === session?.user?.id
-      );
-    }
-    // Filter by specific assignee
-    return tasks.filter((t) => t.assignee_id === assigneeFilter);
-  }, [tasks, assigneeFilter, session?.user?.id]);
+  const filteredTasks = tasks;
 
   const loadTasks = useCallback(async () => {
     if (!session?.user?.id || !date) return;
 
     setLoading(true);
     try {
-      const fetchedTasks = await fetchTasksForDate(session.user.id, date, teamIds, isAdmin);
+      const fetchedTasks = await fetchTasksForDate(session.user.id, date);
       setTasks(fetchedTasks);
     } catch (error) {
       console.error('Failed to load tasks:', error);
     } finally {
       setLoading(false);
     }
-  }, [date, session?.user?.id, teamIds, isAdmin]);
+  }, [date, session?.user?.id]);
 
   // Handle real-time task changes
   const handleTaskChange = useCallback(
@@ -174,7 +137,7 @@ export default function DayViewScreen() {
   );
 
   // Subscribe to real-time task changes
-  useTaskRealtime(session?.user?.id, teamIds, handleTaskChange, isAdmin);
+  useTaskRealtime(session?.user?.id, [], handleTaskChange, false);
 
   // Reload tasks when screen gains focus (e.g., returning from edit/create)
   useFocusEffect(
@@ -217,7 +180,10 @@ export default function DayViewScreen() {
   };
 
   const handleCreateTask = async (values: TaskFormValues) => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id) {
+      showAlert('Error', 'You must be logged in to create a task');
+      return;
+    }
 
     setCreatingTask(true);
     try {
@@ -229,9 +195,9 @@ export default function DayViewScreen() {
         priority: values.priority,
         status: values.status,
         created_by: session.user.id,
-        assignee_id: values.assignee_id,
-        team_id: values.team_id,
-        task_type: values.task_type,
+        assignee_id: null,
+        team_id: null,
+        task_type: 'personal',
       };
 
       const createdTask = await createTask(taskData);
@@ -260,6 +226,8 @@ export default function DayViewScreen() {
       setCreateModalVisible(false);
     } catch (error) {
       console.error('Failed to create task:', error);
+      const message = formatErrorMessage(error);
+      showAlert('Error', `Failed to create task: ${message}`);
     } finally {
       setCreatingTask(false);
     }
@@ -270,12 +238,6 @@ export default function DayViewScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen
-        options={{
-          title: 'Day View',
-          headerBackTitle: 'Calendar',
-        }}
-      />
 
       {!!flashMessage && (
         <View
@@ -305,48 +267,6 @@ export default function DayViewScreen() {
         </View>
       </View>
 
-      {/* Filter Bar (only show when there are team tasks) */}
-      {teams.length > 0 && (
-        <View style={[styles.filterContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterScroll}
-          >
-            {filterOptions.map((option) => (
-              <Pressable
-                key={option.value}
-                onFocus={() => setFocusedFilter(option.value)}
-                onBlur={() => setFocusedFilter((prev) => (prev === option.value ? null : prev))}
-                style={({ pressed, hovered }) => [
-                  styles.filterChip,
-                  {
-                    backgroundColor: colors.surfaceMuted,
-                    borderColor: colors.border,
-                  },
-                  (hovered || focusedFilter === option.value) && Platform.OS === 'web' && {
-                    borderColor: colors.primary,
-                  },
-                  assigneeFilter === option.value && { backgroundColor: colors.primary, borderColor: colors.primary },
-                  pressed && { opacity: 0.85 },
-                ]}
-                onPress={() => setAssigneeFilter(option.value)}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    { color: colors.textMuted },
-                    assigneeFilter === option.value && { color: colors.onPrimary },
-                  ]}
-                >
-                  {option.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
       {/* Task List */}
       <TaskList
         tasks={filteredTasks}
@@ -355,8 +275,7 @@ export default function DayViewScreen() {
         onTaskPress={handleTaskPress}
         onToggleStatus={handleToggleStatus}
         onToggleProgress={handleToggleProgress}
-        assigneeNames={assigneeNames}
-        teamNames={teamNames}
+        viewDate={date}
       />
 
       <TaskModal
@@ -370,9 +289,6 @@ export default function DayViewScreen() {
           due_date: date,
           status: 'new',
         }}
-        isBusinessMode={teams.length > 0}
-        teams={teams}
-        assignableMembers={teamMembersWithProfiles}
       />
 
       {/* Add Task FAB */}
@@ -446,7 +362,6 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,

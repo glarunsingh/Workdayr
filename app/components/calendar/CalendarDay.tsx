@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { TaskSummary } from '@/lib/types';
 import { hapticLight } from '@/lib/haptics';
 import { useAppTheme } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 
 interface CalendarDayProps {
   date: Date;
@@ -24,6 +25,7 @@ export default function CalendarDay({
   onPress,
 }: CalendarDayProps) {
   const { colors } = useAppTheme();
+  const { isMobile } = useResponsive();
   const [isFocused, setIsFocused] = React.useState(false);
   const dayNumber = date.getDate();
   const hasTasks =
@@ -36,6 +38,21 @@ export default function CalendarDay({
     hapticLight();
     onPress(dateString);
   };
+
+  // Build summary items (only non-zero counts)
+  const summaryItems: { count: number; label: string; shortLabel: string; color: string }[] = [];
+  if (taskSummary.new > 0) {
+    summaryItems.push({ count: taskSummary.new, label: 'New', shortLabel: 'N', color: colors.primary });
+  }
+  if (taskSummary.in_progress > 0) {
+    summaryItems.push({ count: taskSummary.in_progress, label: 'In-Progress', shortLabel: 'IP', color: colors.warning });
+  }
+  if (taskSummary.overdue > 0) {
+    summaryItems.push({ count: taskSummary.overdue, label: 'Past Due', shortLabel: 'PD', color: colors.danger });
+  }
+  if (taskSummary.completed > 0) {
+    summaryItems.push({ count: taskSummary.completed, label: 'Completed', shortLabel: 'C', color: colors.textMuted });
+  }
 
   return (
     <Pressable
@@ -73,27 +90,48 @@ export default function CalendarDay({
             styles.dayNumber,
             { color: colors.text },
             !isCurrentMonth && { color: colors.textSubtle },
-            isToday && styles.todayText,
+            isToday && [styles.todayText, { color: colors.onDanger }],
             isSelected && !isToday && { fontWeight: '600' },
           ]}
         >
           {dayNumber}
         </Text>
       </View>
-      
+
       {hasTasks && (
-        <View style={[styles.taskIndicators, !isCurrentMonth && { opacity: 0.6 }]}>
-          {taskSummary.overdue > 0 && (
-            <View style={[styles.dot, { backgroundColor: colors.danger }]} />
-          )}
-          {taskSummary.in_progress > 0 && (
-            <View style={[styles.dot, { backgroundColor: colors.warning }]} />
-          )}
-          {taskSummary.new > 0 && (
-            <View style={[styles.dot, { backgroundColor: colors.primary }]} />
-          )}
-          {taskSummary.completed > 0 && (
-            <View style={[styles.dot, { backgroundColor: colors.textMuted }]} />
+        <View style={[
+          isMobile ? styles.taskSummaryMobile : styles.taskSummaryDesktop,
+          !isCurrentMonth && { opacity: 0.6 },
+        ]}>
+          {isMobile ? (
+            // Mobile: compact inline "2N | 1IP | 1PD | 1C"
+            <Text style={styles.mobileSummaryText} numberOfLines={1}>
+              {summaryItems.map((item, i) => (
+                <Text key={item.shortLabel}>
+                  {i > 0 && (
+                    <Text style={{ color: colors.textSubtle }}>{' | '}</Text>
+                  )}
+                  <Text style={{ color: item.color, fontWeight: '600', fontSize: 9 }}>
+                    {item.count}{item.shortLabel}
+                  </Text>
+                </Text>
+              ))}
+            </Text>
+          ) : (
+            // Web / Tablet / Desktop: multi-line
+            // "2 New"
+            // "1 In-Progress"
+            // "1 Past Due"
+            // "1 Completed"
+            summaryItems.map((item) => (
+              <Text
+                key={item.label}
+                style={[styles.desktopSummaryLine, { color: item.color }]}
+                numberOfLines={1}
+              >
+                {item.count} {item.label}
+              </Text>
+            ))
           )}
         </View>
       )}
@@ -121,17 +159,23 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   todayText: {
-    color: '#fff',
     fontWeight: '600',
   },
-  taskIndicators: {
-    flexDirection: 'row',
+  taskSummaryDesktop: {
     marginTop: 4,
-    gap: 3,
+    alignItems: 'flex-end',
+    gap: 1,
   },
-  dot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+  desktopSummaryLine: {
+    fontSize: 10,
+    fontWeight: '600',
+    lineHeight: 14,
+  },
+  taskSummaryMobile: {
+    marginTop: 4,
+    alignItems: 'flex-end',
+  },
+  mobileSummaryText: {
+    fontSize: 9,
   },
 });

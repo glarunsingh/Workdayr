@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import CalendarDay from './CalendarDay';
 import { WeekStartDay, Task, TaskSummary } from '@/lib/types';
 import { getTaskSummaryForDate, formatDate } from '@/lib/tasks';
+import { useAppTheme } from '@/lib/theme';
 
 interface CalendarGridProps {
   currentDate: Date;
@@ -69,6 +70,7 @@ export default function CalendarGrid({
   tasks,
   onSelectDate,
 }: CalendarGridProps) {
+  const { colors } = useAppTheme();
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const today = formatDate(new Date());
@@ -76,18 +78,18 @@ export default function CalendarGrid({
   const dayLabels = weekStartsOn === 'sunday' ? DAY_LABELS_SUNDAY : DAY_LABELS_MONDAY;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       {/* Day labels header */}
       <View style={styles.dayLabelsRow}>
         {dayLabels.map((label, index) => (
           <View key={index} style={styles.dayLabelCell}>
-            <Text style={styles.dayLabel}>{label}</Text>
+            <Text style={[styles.dayLabel, { color: colors.textSubtle }]}>{label}</Text>
           </View>
         ))}
       </View>
 
       {/* Calendar grid - fills remaining space */}
-      <View style={styles.gridContainer}>
+      <View style={[styles.gridContainer, { borderColor: colors.borderLight }]}>
         {weeks.map((week, weekIndex) => (
           <View key={weekIndex} style={styles.weekRow}>
             {week.map((date, dayIndex) => {
@@ -95,7 +97,7 @@ export default function CalendarGrid({
               const isToday = dateString === today;
               const isSelected = dateString === selectedDate;
               const taskSummary = getTaskSummaryForDate(tasks, dateString, {
-                includeCarryForward: false,
+                includeCarryForward: true,
               });
               
               // Check if date is from previous or next month (show greyed out)
@@ -126,7 +128,6 @@ export default function CalendarGrid({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   dayLabelsRow: {
     flexDirection: 'row',
@@ -140,7 +141,6 @@ const styles = StyleSheet.create({
   dayLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#8E8E93',
     letterSpacing: 0.5,
   },
   gridContainer: {
@@ -148,7 +148,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderTopWidth: 0.5,
     borderLeftWidth: 0.5,
-    borderColor: '#E5E5EA',
   },
   weekRow: {
     flex: 1,
@@ -156,9 +155,7 @@ const styles = StyleSheet.create({
   },
   emptyCell: {
     flex: 1,
-    backgroundColor: '#fff',
     borderRightWidth: 0.5,
     borderBottomWidth: 0.5,
-    borderColor: '#E5E5EA',
   },
 });

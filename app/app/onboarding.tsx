@@ -11,6 +11,7 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAppTheme } from '../lib/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -26,7 +27,7 @@ const SLIDES: OnboardingSlide[] = [
   {
     id: '1',
     icon: 'calendar',
-    iconColor: '#007AFF',
+    iconColor: '#495057',
     title: 'Calendar-First Task Management',
     description:
       'See all your tasks organized by day. Tap any date to view, add, or manage tasks for that day.',
@@ -34,7 +35,7 @@ const SLIDES: OnboardingSlide[] = [
   {
     id: '2',
     icon: 'user',
-    iconColor: '#34C759',
+    iconColor: '#6C757D',
     title: 'Personal Mode',
     description:
       'Start with personal task management. Create tasks, set priorities, and track your progress with no setup required.',
@@ -42,7 +43,7 @@ const SLIDES: OnboardingSlide[] = [
   {
     id: '3',
     icon: 'briefcase',
-    iconColor: '#FF9500',
+    iconColor: '#343A40',
     title: 'Business Mode',
     description:
       'Create a company, invite team members, and assign tasks. Perfect for small teams and businesses.',
@@ -50,7 +51,7 @@ const SLIDES: OnboardingSlide[] = [
   {
     id: '4',
     icon: 'check-circle',
-    iconColor: '#5856D6',
+    iconColor: '#212529',
     title: 'Stay Organized',
     description:
       'Track task status, see overdue items, and never miss a deadline. Your tasks sync across all your devices.',
@@ -80,6 +81,7 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
+  const { colors } = useAppTheme();
 
   const handleViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -115,8 +117,8 @@ export default function OnboardingScreen() {
       <View style={[styles.iconContainer, { backgroundColor: `${item.iconColor}15` }]}>
         <FontAwesome name={item.icon} size={64} color={item.iconColor} />
       </View>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.description}>{item.description}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
+      <Text style={[styles.description, { color: colors.textMuted }]}>{item.description}</Text>
     </View>
   );
 
@@ -127,7 +129,8 @@ export default function OnboardingScreen() {
           key={index}
           style={[
             styles.dot,
-            index === currentIndex && styles.dotActive,
+            { backgroundColor: colors.borderLight },
+            index === currentIndex && [styles.dotActive, { backgroundColor: colors.primary }],
           ]}
         />
       ))}
@@ -137,9 +140,9 @@ export default function OnboardingScreen() {
   const isLastSlide = currentIndex === SLIDES.length - 1;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-        <Text style={styles.skipText}>Skip</Text>
+        <Text style={[styles.skipText, { color: colors.textMuted }]}>Skip</Text>
       </TouchableOpacity>
 
       <FlatList
@@ -157,14 +160,14 @@ export default function OnboardingScreen() {
 
       {renderDots()}
 
-      <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-        <Text style={styles.nextText}>
+      <TouchableOpacity style={[styles.nextButton, { backgroundColor: colors.primary }]} onPress={handleNext}>
+        <Text style={[styles.nextText, { color: colors.onPrimary }]}>
           {isLastSlide ? 'Get Started' : 'Next'}
         </Text>
         <FontAwesome
           name={isLastSlide ? 'check' : 'arrow-right'}
           size={16}
-          color="#fff"
+          color={colors.onPrimary}
         />
       </TouchableOpacity>
     </View>
@@ -174,7 +177,6 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   skipButton: {
     position: 'absolute',
@@ -185,7 +187,6 @@ const styles = StyleSheet.create({
   },
   skipText: {
     fontSize: 16,
-    color: '#666',
   },
   slide: {
     width,
@@ -205,13 +206,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 16,
   },
   description: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -226,17 +225,14 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#ddd',
   },
   dotActive: {
     width: 24,
-    backgroundColor: '#007AFF',
   },
   nextButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
     marginHorizontal: 32,
     marginBottom: 48,
     paddingVertical: 16,
@@ -246,6 +242,5 @@ const styles = StyleSheet.create({
   nextText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
   },
 });

@@ -5,13 +5,14 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import { useAuth } from '../../lib/auth';
+import { useResponsive } from '../../lib/responsive';
+import { useAppTheme } from '../../lib/theme';
+import AuthLayout from '../../components/AuthLayout';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -19,16 +20,17 @@ export default function ForgotPasswordScreen() {
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { resetPassword } = useAuth();
+  const { isMobile } = useResponsive();
+  const { colors, common } = useAppTheme();
 
   const handleResetPassword = async () => {
     setErrorMessage(null);
-    
+
     if (!email) {
       setErrorMessage('Please enter your email address');
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setErrorMessage('Please enter a valid email address');
@@ -38,7 +40,7 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     try {
       const { error } = await resetPassword(email);
-      
+
       if (error) {
         console.error('Reset password error:', error);
         setErrorMessage(error.message || 'Failed to send reset email');
@@ -53,210 +55,184 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  if (success) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <View style={styles.successIcon}>
-            <FontAwesome name="check-circle" size={64} color="#007AFF" />
-          </View>
-          <Text style={styles.title}>Check Your Email</Text>
-          <Text style={styles.successText}>
-            We've sent a password reset link to:
-          </Text>
-          <Text style={styles.emailText}>{email}</Text>
-          <Text style={styles.instructionText}>
-            Click the link in the email to reset your password. If you don't see it, check your spam folder.
-          </Text>
-          
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => router.replace('/(auth)/login')}
-          >
-            <Text style={styles.buttonText}>Back to Login</Text>
-          </TouchableOpacity>
+  const successContent = (
+    <View style={[styles.formWrapper, !isMobile && styles.formWrapperDesktop]}>
+      <View style={styles.formInner}>
+        <View style={styles.successIcon}>
+          <FontAwesome name="check-circle" size={56} color={colors.text} />
         </View>
-      </View>
-    );
-  }
+        <Text style={[styles.heading, { color: colors.text }]}>Check your email</Text>
+        <Text style={[styles.subheading, { color: colors.textSubtle }]}>
+          We've sent a password reset link to:
+        </Text>
+        <Text style={[styles.emailHighlight, { color: colors.text }]}>{email}</Text>
+        <Text style={[styles.instructionText, { color: colors.textSubtle }]}>
+          Click the link in the email to reset your password. If you don't see it, check your spam folder.
+        </Text>
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.content}>
+        <TouchableOpacity
+          style={common.buttonPrimary}
+          onPress={() => router.replace('/(auth)/login')}
+          activeOpacity={0.8}
+        >
+          <Text style={common.buttonPrimaryText}>Back to Sign In</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const formContent = (
+    <View style={[styles.formWrapper, !isMobile && styles.formWrapperDesktop]}>
+      <View style={styles.formInner}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="arrow-left" size={20} color="#007AFF" />
-          <Text style={styles.backText}>Back</Text>
+          <FontAwesome name="arrow-left" size={16} color={colors.textMuted} />
+          <Text style={[styles.backText, { color: colors.textMuted }]}>Back</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>Reset Password</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.heading, { color: colors.text }]}>Reset password</Text>
+        <Text style={[styles.subheading, { color: colors.textSubtle }]}>
           Enter your email address and we'll send you a link to reset your password.
         </Text>
 
         {errorMessage && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{errorMessage}</Text>
+          <View style={common.errorContainer}>
+            <Text style={[common.errorText, styles.errorTextCenter]}>
+              {errorMessage}
+            </Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              setErrorMessage(null);
-            }}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-            autoFocus
-          />
+          <View style={styles.inputGroup}>
+            <Text style={common.inputLabel}>Email</Text>
+            <TextInput
+              style={common.input}
+              placeholder="you@example.com"
+              placeholderTextColor={colors.textDisabled}
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setErrorMessage(null);
+              }}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+              autoFocus
+            />
+          </View>
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[common.buttonPrimary, styles.buttonMarginTop, loading && common.buttonDisabled]}
             onPress={handleResetPassword}
             disabled={loading}
+            activeOpacity={0.8}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Text style={styles.buttonText}>Send Reset Link</Text>
+              <Text style={common.buttonPrimaryText}>Send Reset Link</Text>
             )}
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Remember your password? </Text>
+          <Text style={[styles.footerText, { color: colors.textSubtle }]}>
+            Remember your password?{' '}
+          </Text>
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity>
-              <Text style={styles.link}>Sign In</Text>
+              <Text style={[styles.link, { color: colors.text }]}>Sign In</Text>
             </TouchableOpacity>
           </Link>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </View>
+  );
+
+  return (
+    <AuthLayout>
+      {success ? successContent : formContent}
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  content: {
+  formWrapper: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  formWrapperDesktop: {
+    paddingHorizontal: 56,
+  },
+  formInner: {
+    maxWidth: 400,
+    width: '100%',
+    alignSelf: 'center',
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    position: 'absolute',
-    top: 60,
-    left: 24,
     gap: 8,
+    marginBottom: 28,
   },
   backText: {
-    color: '#007AFF',
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '500',
   },
-  title: {
+  heading: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 12,
+    fontWeight: '700',
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+  subheading: {
+    fontSize: 15,
     marginBottom: 32,
     lineHeight: 22,
+    letterSpacing: 0.1,
   },
   successIcon: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  successText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  emailText: {
+  emailHighlight: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 16,
   },
   instructionText: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 20,
   },
   form: {
-    gap: 16,
+    gap: 20,
   },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
+  inputGroup: {
+    gap: 6,
   },
-  button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
+  buttonMarginTop: {
+    marginTop: 4,
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  errorContainer: {
-    backgroundColor: '#FFE5E5',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#FF3B30',
-  },
-  errorText: {
-    color: '#FF3B30',
-    fontSize: 14,
+  errorTextCenter: {
     textAlign: 'center',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: 28,
   },
   footerText: {
-    color: '#666',
     fontSize: 14,
   },
   link: {
-    color: '#007AFF',
     fontSize: 14,
     fontWeight: '600',
   },

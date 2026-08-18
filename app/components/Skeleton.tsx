@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, ViewStyle } from 'react-native';
+import { useAppTheme } from '@/lib/theme';
 
 interface SkeletonProps {
   width?: number | string;
@@ -17,6 +18,7 @@ export function Skeleton({
   borderRadius = 4,
   style,
 }: SkeletonProps) {
+  const { colors } = useAppTheme();
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export function Skeleton({
       style={[
         styles.skeleton,
         {
+          backgroundColor: colors.surfaceMuted,
           width: width as any,
           height,
           borderRadius,
@@ -64,8 +67,9 @@ export function Skeleton({
  * A skeleton for task cards
  */
 export function TaskCardSkeleton() {
+  const { colors } = useAppTheme();
   return (
-    <View style={styles.taskCard}>
+    <View style={[styles.taskCard, { backgroundColor: colors.surface }]}>
       <View style={styles.taskCardCheckbox}>
         <Skeleton width={24} height={24} borderRadius={12} />
       </View>
@@ -130,12 +134,9 @@ export function CalendarGridSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  skeleton: {
-    backgroundColor: '#e0e0e0',
-  },
+  skeleton: {},
   taskCard: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 6,

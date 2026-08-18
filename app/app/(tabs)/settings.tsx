@@ -5,23 +5,38 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Switch,
   Alert,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSettings } from '@/lib/settings';
-import { useAuth } from '@/lib/auth';
-import { WeekStartDay } from '@/lib/types';
+import { WeekStartDay, ThemePreference } from '@/lib/types';
+import { useAppTheme, AppColors, fontFamily, fontWeight } from '@/lib/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { signOut, session } = useAuth();
-  const { profile, weekStartsOn, updateWeekStartsOn, loading } = useSettings();
+  const {
+    profile,
+    weekStartsOn,
+    updateWeekStartsOn,
+    updateThemePreference,
+    updateNotificationPreferences,
+    loading,
+  } = useSettings();
+  const { colors, spacing } = useAppTheme();
   const [updating, setUpdating] = useState(false);
+  const styles = createStyles(colors);
+
+  const themePreference = profile?.theme_preference || 'system';
+  const notifications = profile?.notification_preferences || {
+    daily_summary: false,
+    due_date_reminder: true,
+    overdue_alert: true,
+  };
 
   const handleWeekStartChange = async (value: WeekStartDay) => {
     if (updating || value === weekStartsOn) return;
-    
     setUpdating(true);
     try {
       await updateWeekStartsOn(value);
@@ -32,146 +47,180 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: signOut },
-      ]
-    );
+  const handleThemeChange = async (value: ThemePreference) => {
+    if (updating || value === themePreference) return;
+    setUpdating(true);
+    try {
+      await updateThemePreference(value);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update theme. Please try again.');
+    } finally {
+      setUpdating(false);
+    }
   };
 
+  const handleNotificationToggle = async (key: 'daily_summary' | 'due_date_reminder' | 'overdue_alert') => {
+    if (updating) return;
+    setUpdating(true);
+    try {
+      await updateNotificationPreferences({ [key]: !notifications[key] });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update notification setting.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const themeOptions: { label: string; value: ThemePreference }[] = [
+    { label: 'System', value: 'system' },
+    { label: 'Light', value: 'light' },
+    { label: 'Dark', value: 'dark' },
+  ];
+
+  const weekOptions: { label: string; value: WeekStartDay; subtitle: string }[] = [
+    { label: 'Sunday', value: 'sunday', subtitle: 'US' },
+    { label: 'Monday', value: 'monday', subtitle: 'EU / ISO' },
+  ];
+
   return (
-    <ScrollView style={styles.container}>
-      {/* User Info Section */}
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* ── Appearance ─────────────────────────────────── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account</Text>
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <View style={styles.avatarPlaceholder}>
-              <FontAwesome name="user" size={24} color="#fff" />
-            </View>
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>
-                {profile?.full_name || 'User'}
-              </Text>
-              <Text style={styles.userEmail}>
-                {session?.user?.email || ''}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      {/* Calendar Settings Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Calendar Settings</Text>
-        <View style={styles.card}>
-          <Text style={styles.settingLabel}>Week starts on</Text>
-          <Text style={styles.settingDescription}>
-            Choose whether your calendar week starts on Sunday (US) or Monday (EU/ISO)
-          </Text>
-          
-          <View style={styles.optionGroup}>
-            <TouchableOpacity
-              style={[
-                styles.optionButton,
-                weekStartsOn === 'sunday' && styles.optionButtonActive,
-              ]}
-              onPress={() => handleWeekStartChange('sunday')}
-              disabled={updating}
-            >
-              <FontAwesome
-                name={weekStartsOn === 'sunday' ? 'check-circle' : 'circle-o'}
-                size={20}
-                color={weekStartsOn === 'sunday' ? '#007AFF' : '#999'}
-              />
-              <Text
-                style={[
-                  styles.optionText,
-                  weekStartsOn === 'sunday' && styles.optionTextActive,
-                ]}
+        <Text style={styles.sectionLabel}>Appearance</Text>
+        <View style={styles.themeRow}>
+          {themeOptions.map((opt) => {
+            const isActive = themePreference === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.themePill, isActive && styles.themePillActive]}
+                onPress={() => handleThemeChange(opt.value)}
+                disabled={updating}
+                activeOpacity={0.7}
               >
-                Sunday (US)
-              </Text>
-            </TouchableOpacity>
+                <Text style={[styles.themePillText, isActive && styles.themePillTextActive]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
 
-            <TouchableOpacity
-              style={[
-                styles.optionButton,
-                weekStartsOn === 'monday' && styles.optionButtonActive,
-              ]}
-              onPress={() => handleWeekStartChange('monday')}
-              disabled={updating}
-            >
-              <FontAwesome
-                name={weekStartsOn === 'monday' ? 'check-circle' : 'circle-o'}
-                size={20}
-                color={weekStartsOn === 'monday' ? '#007AFF' : '#999'}
-              />
-              <Text
-                style={[
-                  styles.optionText,
-                  weekStartsOn === 'monday' && styles.optionTextActive,
-                ]}
+      {/* ── Calendar ───────────────────────────────────── */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Calendar</Text>
+        <Text style={styles.settingTitle}>Week starts on</Text>
+        <View style={styles.optionGroup}>
+          {weekOptions.map((opt) => {
+            const isActive = weekStartsOn === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.optionButton, isActive && styles.optionButtonActive]}
+                onPress={() => handleWeekStartChange(opt.value)}
+                disabled={updating}
+                activeOpacity={0.7}
               >
-                Monday (EU/ISO)
-              </Text>
-            </TouchableOpacity>
-          </View>
+                <View style={[styles.radio, isActive && styles.radioActive]}>
+                  {isActive && <View style={styles.radioDot} />}
+                </View>
+                <Text style={[styles.optionText, isActive && styles.optionTextActive]}>
+                  {opt.label}
+                </Text>
+                <Text style={styles.optionSubtitle}>{opt.subtitle}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
-      {/* App Info Section */}
+      {/* ── Notifications ──────────────────────────────── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
-        <View style={styles.card}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>App Version</Text>
-            <Text style={styles.infoValue}>1.0.0 (MVP)</Text>
+        <Text style={styles.sectionLabel}>Notifications</Text>
+        <View style={styles.toggleList}>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleTitle}>Daily summary</Text>
+              <Text style={styles.toggleDescription}>Morning overview of today's tasks</Text>
+            </View>
+            <Switch
+              value={notifications.daily_summary}
+              onValueChange={() => handleNotificationToggle('daily_summary')}
+              trackColor={{ false: colors.borderLight, true: colors.primary }}
+              thumbColor={colors.surface}
+              disabled={updating}
+            />
           </View>
+
           <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Mode</Text>
-            <Text style={styles.infoValue}>{profile?.mode || 'personal'}</Text>
+
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleTitle}>Due date reminders</Text>
+              <Text style={styles.toggleDescription}>Notify before tasks are due</Text>
+            </View>
+            <Switch
+              value={notifications.due_date_reminder}
+              onValueChange={() => handleNotificationToggle('due_date_reminder')}
+              trackColor={{ false: colors.borderLight, true: colors.primary }}
+              thumbColor={colors.surface}
+              disabled={updating}
+            />
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleTitle}>Overdue alerts</Text>
+              <Text style={styles.toggleDescription}>Alert when tasks pass their due date</Text>
+            </View>
+            <Switch
+              value={notifications.overdue_alert}
+              onValueChange={() => handleNotificationToggle('overdue_alert')}
+              trackColor={{ false: colors.borderLight, true: colors.primary }}
+              thumbColor={colors.surface}
+              disabled={updating}
+            />
           </View>
         </View>
       </View>
 
-      {/* Legal Section */}
+      {/* ── About ──────────────────────────────────────── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Legal</Text>
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={styles.linkRow}
-            onPress={() => router.push('/legal/terms')}
-          >
-            <FontAwesome name="file-text-o" size={18} color="#666" />
-            <Text style={styles.linkText}>Terms of Service</Text>
-            <FontAwesome name="chevron-right" size={14} color="#ccc" />
-          </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity
-            style={styles.linkRow}
-            onPress={() => router.push('/legal/privacy')}
-          >
-            <FontAwesome name="lock" size={18} color="#666" />
-            <Text style={styles.linkText}>Privacy Policy</Text>
-            <FontAwesome name="chevron-right" size={14} color="#ccc" />
-          </TouchableOpacity>
+        <Text style={styles.sectionLabel}>About</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Version</Text>
+          <Text style={styles.infoValue}>1.0.0 (MVP)</Text>
         </View>
       </View>
 
-      {/* Sign Out Button */}
+      {/* ── Legal ──────────────────────────────────────── */}
       <View style={styles.section}>
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <FontAwesome name="sign-out" size={18} color="#FF3B30" />
-          <Text style={styles.signOutText}>Sign Out</Text>
+        <Text style={styles.sectionLabel}>Legal</Text>
+        <TouchableOpacity
+          style={styles.linkRow}
+          onPress={() => router.push('/legal/terms')}
+          activeOpacity={0.6}
+        >
+          <Text style={styles.linkText}>Terms of Service</Text>
+          <FontAwesome name="chevron-right" size={12} color={colors.textDisabled} />
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        <TouchableOpacity
+          style={styles.linkRow}
+          onPress={() => router.push('/legal/privacy')}
+          activeOpacity={0.6}
+        >
+          <Text style={styles.linkText}>Privacy Policy</Text>
+          <FontAwesome name="chevron-right" size={12} color={colors.textDisabled} />
         </TouchableOpacity>
       </View>
 
+      {/* ── Footer ─────────────────────────────────────── */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>Workdayr © 2026</Text>
       </View>
@@ -179,147 +228,197 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 16,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    textTransform: 'uppercase',
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  userInfo: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-  },
-  optionGroup: {
-    gap: 8,
-  },
-  optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  optionButtonActive: {
-    backgroundColor: '#E8F4FD',
-    borderColor: '#007AFF',
-  },
-  optionText: {
-    fontSize: 16,
-    color: '#666',
-    marginLeft: 12,
-  },
-  optionTextActive: {
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  infoLabel: {
-    fontSize: 16,
-    color: '#333',
-  },
-  infoValue: {
-    fontSize: 16,
-    color: '#666',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 12,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  linkText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
-    marginLeft: 12,
-  },
-  signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#FF3B30',
-  },
-  signOutText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FF3B30',
-    marginLeft: 8,
-  },
-  footer: {
-    alignItems: 'center',
-    padding: 32,
-  },
-  footerText: {
-    fontSize: 12,
-    color: '#999',
-  },
-});
+const createStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      paddingBottom: 40,
+    },
+
+    // ── Sections ──────────────────
+    section: {
+      marginTop: 32,
+      paddingHorizontal: 20,
+    },
+    sectionLabel: {
+      fontSize: 12,
+      fontWeight: fontWeight.semibold,
+      fontFamily: fontFamily,
+      color: colors.textSubtle,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+      marginBottom: 16,
+    },
+
+    // ── Appearance / Theme ────────
+    themeRow: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    themePill: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+    },
+    themePillActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.surfaceMuted,
+    },
+    themePillText: {
+      fontSize: 14,
+      fontWeight: fontWeight.medium,
+      fontFamily: fontFamily,
+      color: colors.textMuted,
+    },
+    themePillTextActive: {
+      color: colors.text,
+      fontWeight: fontWeight.semibold,
+    },
+
+    // ── Calendar Week Start ───────
+    settingTitle: {
+      fontSize: 15,
+      fontWeight: fontWeight.medium,
+      fontFamily: fontFamily,
+      color: colors.text,
+      marginBottom: 12,
+    },
+    optionGroup: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    optionButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    optionButtonActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.surfaceMuted,
+    },
+    radio: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      borderWidth: 1.5,
+      borderColor: colors.textDisabled,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 10,
+    },
+    radioActive: {
+      borderColor: colors.primary,
+    },
+    radioDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.primary,
+    },
+    optionText: {
+      fontSize: 15,
+      fontWeight: fontWeight.medium,
+      fontFamily: fontFamily,
+      color: colors.textMuted,
+    },
+    optionTextActive: {
+      color: colors.text,
+      fontWeight: fontWeight.semibold,
+    },
+    optionSubtitle: {
+      fontSize: 13,
+      fontFamily: fontFamily,
+      color: colors.textSubtle,
+      marginLeft: 6,
+    },
+
+    // ── Notifications ─────────────
+    toggleList: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 16,
+    },
+    toggleInfo: {
+      flex: 1,
+      marginRight: 16,
+    },
+    toggleTitle: {
+      fontSize: 15,
+      fontWeight: fontWeight.medium,
+      fontFamily: fontFamily,
+      color: colors.text,
+    },
+    toggleDescription: {
+      fontSize: 13,
+      fontFamily: fontFamily,
+      color: colors.textSubtle,
+      marginTop: 2,
+    },
+
+    // ── About ─────────────────────
+    infoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 8,
+    },
+    infoLabel: {
+      fontSize: 15,
+      fontFamily: fontFamily,
+      color: colors.text,
+    },
+    infoValue: {
+      fontSize: 15,
+      fontFamily: fontFamily,
+      color: colors.textSubtle,
+    },
+
+    // ── Legal & links ─────────────
+    linkRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 12,
+    },
+    linkText: {
+      fontSize: 15,
+      fontFamily: fontFamily,
+      color: colors.text,
+    },
+
+    // ── Shared ────────────────────
+    divider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.borderLight,
+    },
+
+    // ── Footer ────────────────────
+    footer: {
+      alignItems: 'center',
+      paddingVertical: 40,
+    },
+    footerText: {
+      fontSize: 12,
+      fontFamily: fontFamily,
+      color: colors.textDisabled,
+    },
+  });

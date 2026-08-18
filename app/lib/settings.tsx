@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { useAuth } from './auth';
-import { Profile, WeekStartDay, UserMode } from './types';
+import { Profile, WeekStartDay, UserMode, ThemePreference, NotificationPreferences } from './types';
 
 interface SettingsContextType {
   profile: Profile | null;
@@ -10,6 +10,9 @@ interface SettingsContextType {
   loading: boolean;
   updateWeekStartsOn: (value: WeekStartDay) => Promise<void>;
   updateMode: (value: UserMode) => Promise<void>;
+  updateProfile: (fields: Partial<Pick<Profile, 'full_name' | 'avatar_url' | 'timezone' | 'daily_goal'>>) => Promise<void>;
+  updateThemePreference: (value: ThemePreference) => Promise<void>;
+  updateNotificationPreferences: (value: Partial<NotificationPreferences>) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -81,6 +84,62 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateProfile = async (fields: Partial<Pick<Profile, 'full_name' | 'avatar_url' | 'timezone' | 'daily_goal'>>) => {
+    if (!session?.user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(fields)
+        .eq('id', session.user.id);
+
+      if (error) throw error;
+      setProfile((prev) => prev ? { ...prev, ...fields } : null);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  };
+
+  const updateThemePreference = async (value: ThemePreference) => {
+    if (!session?.user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ theme_preference: value })
+        .eq('id', session.user.id);
+
+      if (error) throw error;
+      setProfile((prev) => prev ? { ...prev, theme_preference: value } : null);
+    } catch (error) {
+      console.error('Error updating theme preference:', error);
+      throw error;
+    }
+  };
+
+  const updateNotificationPreferences = async (value: Partial<NotificationPreferences>) => {
+    if (!session?.user?.id || !profile) return;
+
+    const merged = {
+      ...profile.notification_preferences,
+      ...value,
+    };
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ notification_preferences: merged })
+        .eq('id', session.user.id);
+
+      if (error) throw error;
+      setProfile((prev) => prev ? { ...prev, notification_preferences: merged } : null);
+    } catch (error) {
+      console.error('Error updating notification preferences:', error);
+      throw error;
+    }
+  };
+
   const refreshProfile = async () => {
     setLoading(true);
     await fetchProfile();
@@ -93,6 +152,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     loading,
     updateWeekStartsOn,
     updateMode,
+    updateProfile,
+    updateThemePreference,
+    updateNotificationPreferences,
     refreshProfile,
   };
 

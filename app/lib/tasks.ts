@@ -19,11 +19,22 @@ export const getMonthDateRange = (year: number, month: number) => {
   };
 };
 
-// Check if a task is overdue
+// Check if a task is currently overdue (effective end date has passed)
 export const isTaskOverdue = (task: Task): boolean => {
   if (task.status === 'completed') return false;
   const today = formatDate(new Date());
-  return task.due_date < today;
+  const effectiveEnd = task.end_date || task.due_date;
+  return effectiveEnd < today;
+};
+
+// Check if a task is Past Due when viewed on a specific date.
+// Returns true only when the task's effective end date is BEFORE the viewDate.
+// This means tasks within their scheduled range (due_date–end_date) are Normal,
+// and only become Past Due on dates after the scheduled range.
+export const isTaskPastDueOnDate = (task: Task, viewDate: string): boolean => {
+  if (task.status === 'completed') return false;
+  const effectiveEnd = task.end_date || task.due_date;
+  return effectiveEnd < viewDate;
 };
 
 const buildScopeAndDateOrFilter = (
@@ -189,9 +200,11 @@ export const getTaskSummaryForDate = (
   };
 
   tasksForDate.forEach((task) => {
+    const effectiveEnd = task.end_date || task.due_date;
     if (task.status === 'completed') {
       summary.completed++;
-    } else if (task.due_date < today) {
+    } else if (effectiveEnd < date) {
+      // Task's scheduled range has ended before this date → Past Due
       summary.overdue++;
     } else if (task.status === 'in_progress') {
       summary.in_progress++;

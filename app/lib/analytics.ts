@@ -138,7 +138,6 @@ export const AnalyticsEvents = {
 
   // Navigation events
   SCREEN_VIEW: 'screen_view',
-  TAB_CHANGED: 'tab_changed',
 
   // Settings events
   SETTINGS_CHANGED: 'settings_changed',

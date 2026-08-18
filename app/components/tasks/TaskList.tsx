@@ -16,6 +16,8 @@ interface TaskListProps {
   // Optional maps for displaying assignee and team names
   assigneeNames?: Record<string, string>;
   teamNames?: Record<string, string>;
+  /** The date being viewed — passed to TaskCard for contextual Past Due logic */
+  viewDate?: string;
 }
 
 export default function TaskList({
@@ -27,6 +29,7 @@ export default function TaskList({
   onToggleProgress,
   assigneeNames = {},
   teamNames = {},
+  viewDate,
 }: TaskListProps) {
   const { colors } = useAppTheme();
 
@@ -62,6 +65,7 @@ export default function TaskList({
           onToggleProgress={onToggleProgress}
           assigneeName={item.assignee_id ? assigneeNames[item.assignee_id] : null}
           teamName={item.team_id ? teamNames[item.team_id] : null}
+          viewDate={viewDate}
         />
       )}
       contentContainerStyle={styles.listContent}
@@ -80,19 +84,16 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
   },
   emptyText: {
     marginTop: 16,
     fontSize: 18,
     fontWeight: '600',
-    color: '#666',
     textAlign: 'center',
   },
   emptySubtext: {
     marginTop: 8,
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
   },
   listContent: {

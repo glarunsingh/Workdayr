@@ -15,6 +15,7 @@ import * as Clipboard from 'expo-clipboard';
 import { FontAwesome } from '@expo/vector-icons';
 import { useCompany } from '@/lib/company';
 import { useSettings } from '@/lib/settings';
+import { useAppTheme, AppColors } from '@/lib/theme';
 
 export default function BusinessScreen() {
   const { 
@@ -42,6 +43,8 @@ export default function BusinessScreen() {
   const [joinCode, setJoinCode] = useState('');
   const [joiningWithCode, setJoiningWithCode] = useState(false);
   const [showJoinForm, setShowJoinForm] = useState(false);
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
 
   const handleCreateCompany = async () => {
     if (!companyName.trim()) {
@@ -259,7 +262,7 @@ export default function BusinessScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.info} />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -285,7 +288,7 @@ export default function BusinessScreen() {
               <FontAwesome
                 name="user"
                 size={20}
-                color={mode === 'personal' ? '#fff' : '#666'}
+                color={mode === 'personal' ? colors.onPrimary : colors.textMuted}
               />
               <Text
                 style={[
@@ -307,7 +310,7 @@ export default function BusinessScreen() {
               <FontAwesome
                 name="briefcase"
                 size={20}
-                color={mode === 'business' ? '#fff' : '#666'}
+                color={mode === 'business' ? colors.onPrimary : colors.textMuted}
               />
               <Text
                 style={[
@@ -359,7 +362,7 @@ export default function BusinessScreen() {
               <>
                 <View style={styles.companyHeader}>
                   <View style={styles.companyIcon}>
-                    <FontAwesome name="building" size={24} color="#007AFF" />
+                    <FontAwesome name="building" size={24} color={colors.info} />
                   </View>
                   <View style={styles.companyInfo}>
                     <Text style={styles.companyName}>{company?.name}</Text>
@@ -377,7 +380,7 @@ export default function BusinessScreen() {
                         setEditingName(true);
                       }}
                     >
-                      <FontAwesome name="pencil" size={16} color="#007AFF" />
+                      <FontAwesome name="pencil" size={16} color={colors.info} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -411,7 +414,7 @@ export default function BusinessScreen() {
                           style={styles.addTeamButton}
                           onPress={() => setShowCreateTeamForm(true)}
                         >
-                          <FontAwesome name="plus" size={14} color="#007AFF" />
+                          <FontAwesome name="plus" size={14} color={colors.info} />
                           <Text style={styles.addTeamButtonText}>Add Team</Text>
                         </TouchableOpacity>
                       )}
@@ -435,7 +438,7 @@ export default function BusinessScreen() {
                               setTeamName('');
                             }}
                           >
-                            <FontAwesome name="times" size={16} color="#999" />
+                            <FontAwesome name="times" size={16} color={colors.textSubtle} />
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={[styles.teamSaveButton, creatingTeam && styles.buttonDisabled]}
@@ -443,9 +446,9 @@ export default function BusinessScreen() {
                             disabled={creatingTeam}
                           >
                             {creatingTeam ? (
-                              <ActivityIndicator size="small" color="#fff" />
+                              <ActivityIndicator size="small" color={colors.onPrimary} />
                             ) : (
-                              <FontAwesome name="check" size={16} color="#fff" />
+                              <FontAwesome name="check" size={16} color={colors.onPrimary} />
                             )}
                           </TouchableOpacity>
                         </View>
@@ -475,18 +478,18 @@ export default function BusinessScreen() {
                                   setEditingTeamName('');
                                 }}
                               >
-                                <FontAwesome name="times" size={16} color="#999" />
+                                <FontAwesome name="times" size={16} color={colors.textSubtle} />
                               </TouchableOpacity>
                               <TouchableOpacity
                                 style={styles.teamSaveButton}
                                 onPress={() => handleUpdateTeam(team.id)}
                               >
-                                <FontAwesome name="check" size={16} color="#fff" />
+                                <FontAwesome name="check" size={16} color={colors.onPrimary} />
                               </TouchableOpacity>
                             </>
                           ) : (
                             <>
-                              <FontAwesome name="users" size={16} color="#666" />
+                              <FontAwesome name="users" size={16} color={colors.textMuted} />
                               <Text style={styles.teamName}>{team.name}</Text>
                               <Text style={styles.teamMemberCount}>
                                 {memberCount} {memberCount === 1 ? 'member' : 'members'}
@@ -500,13 +503,13 @@ export default function BusinessScreen() {
                                       setEditingTeamName(team.name);
                                     }}
                                   >
-                                    <FontAwesome name="pencil" size={14} color="#007AFF" />
+                                    <FontAwesome name="pencil" size={14} color={colors.info} />
                                   </TouchableOpacity>
                                   <TouchableOpacity
                                     style={styles.teamActionButton}
                                     onPress={() => handleDeleteTeam(team.id, team.name)}
                                   >
-                                    <FontAwesome name="trash-o" size={14} color="#FF3B30" />
+                                    <FontAwesome name="trash-o" size={14} color={colors.danger} />
                                   </TouchableOpacity>
                                 </View>
                               )}
@@ -549,7 +552,7 @@ export default function BusinessScreen() {
                 disabled={creating}
               >
                 {creating ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color={colors.onPrimary} />
                 ) : (
                   <Text style={styles.createButtonText}>Create</Text>
                 )}
@@ -559,7 +562,7 @@ export default function BusinessScreen() {
         ) : (
           <View style={styles.card}>
             <View style={styles.emptyState}>
-              <FontAwesome name="building-o" size={48} color="#ccc" />
+              <FontAwesome name="building-o" size={48} color={colors.textDisabled} />
               <Text style={styles.emptyStateTitle}>No Company Yet</Text>
               <Text style={styles.emptyStateDescription}>
                 Create a company to start managing business tasks with your team.
@@ -568,7 +571,7 @@ export default function BusinessScreen() {
                 style={styles.createCompanyButton}
                 onPress={() => setShowCreateForm(true)}
               >
-                <FontAwesome name="plus" size={16} color="#fff" />
+                <FontAwesome name="plus" size={16} color={colors.onPrimary} />
                 <Text style={styles.createCompanyButtonText}>Create Company</Text>
               </TouchableOpacity>
             </View>
@@ -591,7 +594,7 @@ export default function BusinessScreen() {
               return (
                 <View key={team.id} style={styles.inviteTeamSection}>
                   <View style={styles.inviteTeamHeader}>
-                    <FontAwesome name="users" size={16} color="#666" />
+                    <FontAwesome name="users" size={16} color={colors.textMuted} />
                     <Text style={styles.inviteTeamName}>{team.name}</Text>
                     <TouchableOpacity
                       style={[styles.generateCodeButton, generatingCode && styles.buttonDisabled]}
@@ -599,10 +602,10 @@ export default function BusinessScreen() {
                       disabled={generatingCode}
                     >
                       {generatingCode ? (
-                        <ActivityIndicator size="small" color="#007AFF" />
+                        <ActivityIndicator size="small" color={colors.info} />
                       ) : (
                         <>
-                          <FontAwesome name="plus" size={12} color="#007AFF" />
+                          <FontAwesome name="plus" size={12} color={colors.info} />
                           <Text style={styles.generateCodeButtonText}>New Code</Text>
                         </>
                       )}
@@ -629,19 +632,19 @@ export default function BusinessScreen() {
                                 style={styles.codeActionButton}
                                 onPress={() => handleCopyCode(invite.code)}
                               >
-                                <FontAwesome name="copy" size={16} color="#007AFF" />
+                                <FontAwesome name="copy" size={16} color={colors.info} />
                               </TouchableOpacity>
                               <TouchableOpacity
                                 style={styles.codeActionButton}
                                 onPress={() => handleShareCode(invite.code, team.name)}
                               >
-                                <FontAwesome name="share" size={16} color="#007AFF" />
+                                <FontAwesome name="share" size={16} color={colors.info} />
                               </TouchableOpacity>
                               <TouchableOpacity
                                 style={styles.codeActionButton}
                                 onPress={() => handleDeactivateCode(invite.id)}
                               >
-                                <FontAwesome name="trash-o" size={16} color="#FF3B30" />
+                                <FontAwesome name="trash-o" size={16} color={colors.danger} />
                               </TouchableOpacity>
                             </View>
                           </View>
@@ -694,7 +697,7 @@ export default function BusinessScreen() {
                     disabled={joiningWithCode}
                   >
                     {joiningWithCode ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                      <ActivityIndicator size="small" color={colors.onPrimary} />
                     ) : (
                       <Text style={styles.createButtonText}>Join</Text>
                     )}
@@ -703,7 +706,7 @@ export default function BusinessScreen() {
               </View>
             ) : (
               <View style={styles.emptyState}>
-                <FontAwesome name="ticket" size={48} color="#ccc" />
+                <FontAwesome name="ticket" size={48} color={colors.textDisabled} />
                 <Text style={styles.emptyStateTitle}>Have an Invite Code?</Text>
                 <Text style={styles.emptyStateDescription}>
                   If someone shared an invite code with you, use it to join their company.
@@ -712,7 +715,7 @@ export default function BusinessScreen() {
                   style={styles.joinButton}
                   onPress={() => setShowJoinForm(true)}
                 >
-                  <FontAwesome name="sign-in" size={16} color="#fff" />
+                  <FontAwesome name="sign-in" size={16} color={colors.onSuccess} />
                   <Text style={styles.joinButtonText}>Enter Invite Code</Text>
                 </TouchableOpacity>
               </View>
@@ -726,7 +729,7 @@ export default function BusinessScreen() {
         <Text style={styles.sectionTitle}>Coming Soon</Text>
         <View style={styles.card}>
           <View style={styles.comingSoonItem}>
-            <FontAwesome name="tasks" size={20} color="#999" />
+            <FontAwesome name="tasks" size={20} color={colors.textSubtle} />
             <View style={styles.comingSoonText}>
               <Text style={styles.comingSoonTitle}>Assign Tasks</Text>
               <Text style={styles.comingSoonDescription}>
@@ -740,21 +743,21 @@ export default function BusinessScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
+    color: colors.textMuted,
   },
   section: {
     paddingHorizontal: 16,
@@ -763,16 +766,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 8,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -780,7 +783,7 @@ const styles = StyleSheet.create({
   },
   settingDescription: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textMuted,
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -796,18 +799,18 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     borderRadius: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.surfaceAlt,
   },
   modeButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.info,
   },
   modeButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textMuted,
   },
   modeButtonTextActive: {
-    color: '#fff',
+    color: colors.onPrimary,
   },
   companyHeader: {
     flexDirection: 'row',
@@ -817,7 +820,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.surfaceMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -828,10 +831,10 @@ const styles = StyleSheet.create({
   companyName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
   },
   adminBadge: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: colors.surfaceMuted,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
@@ -841,7 +844,7 @@ const styles = StyleSheet.create({
   adminBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: colors.success,
     textTransform: 'uppercase',
   },
   editButton: {
@@ -849,7 +852,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#eee',
+    backgroundColor: colors.border,
     marginVertical: 16,
   },
   statsRow: {
@@ -862,17 +865,17 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#333',
+    color: colors.text,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textMuted,
     marginTop: 2,
   },
   subSectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
   },
   teamsHeader: {
     flexDirection: 'row',
@@ -887,12 +890,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.surfaceMuted,
   },
   addTeamButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#007AFF',
+    color: colors.info,
   },
   createTeamForm: {
     flexDirection: 'row',
@@ -901,28 +904,28 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 8,
   },
   teamInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   teamEditInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: colors.info,
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 6,
     fontSize: 14,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   teamFormActions: {
     flexDirection: 'row',
@@ -932,7 +935,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 6,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -940,7 +943,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 6,
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.info,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -964,11 +967,11 @@ const styles = StyleSheet.create({
   teamName: {
     flex: 1,
     fontSize: 15,
-    color: '#333',
+    color: colors.text,
   },
   teamMemberCount: {
     fontSize: 13,
-    color: '#999',
+    color: colors.textSubtle,
   },
   emptyState: {
     alignItems: 'center',
@@ -977,12 +980,12 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     marginTop: 16,
   },
   emptyStateDescription: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 8,
     marginHorizontal: 16,
@@ -992,7 +995,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.info,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
@@ -1001,28 +1004,28 @@ const styles = StyleSheet.create({
   createCompanyButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.onPrimary,
   },
   formTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     marginBottom: 8,
   },
   formDescription: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textMuted,
     marginBottom: 16,
     lineHeight: 20,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    backgroundColor: colors.surfaceAlt,
   },
   formActions: {
     flexDirection: 'row',
@@ -1042,18 +1045,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.surfaceAlt,
   },
   cancelButtonText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#666',
+    color: colors.textMuted,
   },
   createButton: {
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.info,
     minWidth: 80,
     alignItems: 'center',
   },
@@ -1061,17 +1064,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.info,
   },
   saveButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.onPrimary,
   },
   createButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.onPrimary,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -1087,11 +1090,11 @@ const styles = StyleSheet.create({
   comingSoonTitle: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#666',
+    color: colors.textMuted,
   },
   comingSoonDescription: {
     fontSize: 13,
-    color: '#999',
+    color: colors.textSubtle,
     marginTop: 2,
   },
   // Invite code styles
@@ -1108,7 +1111,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
   },
   generateCodeButton: {
     flexDirection: 'row',
@@ -1117,12 +1120,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.surfaceMuted,
   },
   generateCodeButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#007AFF',
+    color: colors.info,
   },
   codesList: {
     gap: 8,
@@ -1130,7 +1133,7 @@ const styles = StyleSheet.create({
   codeItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 8,
     padding: 12,
   },
@@ -1140,13 +1143,13 @@ const styles = StyleSheet.create({
   codeText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#333',
+    color: colors.text,
     letterSpacing: 2,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   codeDetails: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textMuted,
     marginTop: 4,
   },
   codeActions: {
@@ -1157,15 +1160,15 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: colors.borderLight,
   },
   noCodesText: {
     fontSize: 13,
-    color: '#999',
+    color: colors.textSubtle,
     fontStyle: 'italic',
     marginLeft: 26,
   },
@@ -1173,7 +1176,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#34C759',
+    backgroundColor: colors.success,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
@@ -1182,6 +1185,6 @@ const styles = StyleSheet.create({
   joinButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.onSuccess,
   },
 });

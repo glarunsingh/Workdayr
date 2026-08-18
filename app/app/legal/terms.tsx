@@ -8,9 +8,12 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
+import { useAppTheme, AppColors } from '@/lib/theme';
 
 export default function TermsOfServiceScreen() {
   const router = useRouter();
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
 
   return (
     <>
@@ -19,7 +22,7 @@ export default function TermsOfServiceScreen() {
           title: 'Terms of Service',
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <FontAwesome name="chevron-left" size={16} color="#007AFF" />
+              <FontAwesome name="chevron-left" size={16} color={colors.info} />
             </TouchableOpacity>
           ),
         }}
@@ -112,10 +115,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   content: {
     padding: 20,
@@ -126,7 +129,7 @@ const styles = StyleSheet.create({
   },
   lastUpdated: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSubtle,
     marginBottom: 24,
     fontStyle: 'italic',
   },
@@ -136,12 +139,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     marginBottom: 8,
   },
   sectionContent: {
     fontSize: 15,
-    color: '#555',
+    color: colors.textMuted,
     lineHeight: 22,
   },
   footer: {

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Task } from '@/lib/types';
-import { isTaskOverdue } from '@/lib/tasks';
+import { isTaskOverdue, isTaskPastDueOnDate } from '@/lib/tasks';
 import { hapticSelection, hapticSuccess } from '@/lib/haptics';
 import { useAppTheme } from '@/lib/theme';
 
@@ -13,19 +13,25 @@ interface TaskCardProps {
   onToggleProgress?: (task: Task) => void;
   assigneeName?: string | null;
   teamName?: string | null;
+  /** When provided, Past Due badge is shown only if the task's effective end < viewDate */
+  viewDate?: string;
 }
 
-const PRIORITY_COLORS = {
-  low: '#8E8E93',
-  medium: '#6B7280',
-  high: '#FF3B30',
+const getPriorityColor = (priority: Task['priority'], colors: { textSubtle: string; textMuted: string; danger: string }) => {
+  switch (priority) {
+    case 'high': return colors.danger;
+    case 'medium': return colors.textMuted;
+    case 'low':
+    default: return colors.textSubtle;
+  }
 };
 
-export default function TaskCard({ task, onPress, onToggleStatus, assigneeName, teamName }: TaskCardProps) {
+export default function TaskCard({ task, onPress, onToggleStatus, assigneeName, teamName, viewDate }: TaskCardProps) {
   const { colors } = useAppTheme();
   const isCompleted = task.status === 'completed';
   const isInProgress = task.status === 'in_progress';
-  const isOverdue = isTaskOverdue(task);
+  // Use date-contextual check when viewDate is provided, otherwise fall back to global check
+  const isOverdue = viewDate ? isTaskPastDueOnDate(task, viewDate) : isTaskOverdue(task);
 
   const handleToggle = () => {
     // Haptic feedback on toggle
@@ -92,7 +98,7 @@ export default function TaskCard({ task, onPress, onToggleStatus, assigneeName, 
         )}
 
         <View style={styles.metaRow}>
-          <View style={[styles.priorityBadge, { backgroundColor: PRIORITY_COLORS[task.priority] }]}>
+          <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(task.priority, colors) }]}>
             <Text style={[styles.priorityText, { color: colors.onPrimary }]}>{task.priority}</Text>
           </View>
 
@@ -158,7 +164,6 @@ const styles = StyleSheet.create({
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 6,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -199,7 +204,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   overdueText: {
-    color: '#fff',
     fontSize: 10,
     fontWeight: 'bold',
   },
@@ -230,7 +234,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   priorityText: {
-    color: '#fff',
     fontSize: 10,
     fontWeight: '600',
     textTransform: 'capitalize',

@@ -4,14 +4,17 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { useAppTheme, ColorSchemeOverrideProvider, resolveColorScheme } from '@/lib/theme';
+import type { ColorSchemeName } from '@/lib/theme';
 import { AuthProvider, useAuth } from '../lib/auth';
-import { SettingsProvider } from '../lib/settings';
+import { SettingsProvider, useSettings } from '../lib/settings';
 import { CompanyProvider } from '../lib/company';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { AppHeader } from '@/components/AppHeader';
 import { hasCompletedOnboarding } from './onboarding';
 import { analytics } from '@/lib/analytics';
 import { errorMonitor, logAppInfo } from '@/lib/errorMonitoring';
@@ -73,7 +76,13 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+  const systemScheme = (useColorScheme() ?? 'light') as ColorSchemeName;
+  const { profile } = useSettings();
+  const effectiveScheme = resolveColorScheme(
+    profile?.theme_preference as 'system' | 'light' | 'dark' | undefined,
+    systemScheme,
+  );
+  const { colors } = useAppTheme();
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
@@ -126,32 +135,29 @@ function RootLayoutNav() {
   // Show loading indicator while checking auth
   if (loading || checkingOnboarding) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <OfflineBanner />
-      <Stack>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="legal" options={{ headerShown: false }} />
-        <Stack.Screen name="day/[date]" options={{ headerShown: true, title: 'Day View' }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <ColorSchemeOverrideProvider override={effectiveScheme}>
+      <ThemeProvider value={effectiveScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <View style={{ flex: 1 }}>
+          <OfflineBanner />
+          {user && <AppHeader />}
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="legal" />
+            <Stack.Screen name="day/[date]" />
+            <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
+          </Stack>
+        </View>
+      </ThemeProvider>
+    </ColorSchemeOverrideProvider>
   );
 }
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-});

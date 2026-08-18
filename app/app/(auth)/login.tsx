@@ -5,34 +5,28 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { Link, router } from 'expo-router';
+import { FontAwesome } from '@expo/vector-icons';
 import { useAuth } from '../../lib/auth';
-
-// Cross-platform alert helper
-const showAlert = (title: string, message: string) => {
-  if (Platform.OS === 'web') {
-    window.alert(`${title}\n\n${message}`);
-  } else {
-    // Dynamic import for native Alert
-    const { Alert } = require('react-native');
-    Alert.alert(title, message);
-  }
-};
+import { useResponsive } from '../../lib/responsive';
+import { useAppTheme } from '../../lib/theme';
+import AuthLayout from '../../components/AuthLayout';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { signIn } = useAuth();
+  const { isMobile } = useResponsive();
+  const { colors, common } = useAppTheme();
 
   const handleLogin = async () => {
     setErrorMessage(null);
-    
+
     if (!email || !password) {
       setErrorMessage('Please fill in all fields');
       return;
@@ -41,7 +35,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const { error } = await signIn(email, password);
-      
+
       if (error) {
         console.error('Login error:', error);
         setErrorMessage(error.message || 'Login failed. Please check your credentials.');
@@ -57,161 +51,187 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.content}>
-        <Text style={styles.title}>Workdayr</Text>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
+    <AuthLayout>
+      <View style={[styles.formWrapper, !isMobile && styles.formWrapperDesktop]}>
+        <View style={styles.formInner}>
+          <Text style={[styles.heading, { color: colors.text }]}>Sign in</Text>
+          <Text style={[styles.subheading, { color: colors.textSubtle }]}>
+            Enter your credentials to continue
+          </Text>
 
-        {errorMessage && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{errorMessage}</Text>
+          {errorMessage && (
+            <View style={common.errorContainer}>
+              <Text style={[common.errorText, styles.errorTextCenter]}>
+                {errorMessage}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={common.inputLabel}>Email</Text>
+              <TextInput
+                style={common.input}
+                placeholder="you@example.com"
+                placeholderTextColor={colors.textDisabled}
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setErrorMessage(null);
+                }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <Text style={common.inputLabel}>Password</Text>
+                <Link href="/(auth)/forgot-password" asChild>
+                  <TouchableOpacity>
+                    <Text style={[styles.forgotPasswordText, { color: colors.textMuted }]}>
+                      Forgot password?
+                    </Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
+              <View
+                style={[
+                  styles.passwordContainer,
+                  { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+                ]}
+              >
+                <TextInput
+                  style={[styles.passwordInput, { color: colors.text }]}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.textDisabled}
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    setErrorMessage(null);
+                  }}
+                  secureTextEntry={!showPassword}
+                  autoComplete="password"
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <FontAwesome
+                    name={showPassword ? 'eye' : 'eye-slash'}
+                    size={18}
+                    color={colors.textSubtle}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[common.buttonPrimary, styles.buttonMarginTop, loading && common.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.onPrimary} />
+              ) : (
+                <Text style={common.buttonPrimaryText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
           </View>
-        )}
 
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              setErrorMessage(null);
-            }}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-          />
-
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#999"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              setErrorMessage(null);
-            }}
-            secureTextEntry
-            autoComplete="password"
-          />
-
-          <Link href="/(auth)/forgot-password" asChild>
-            <TouchableOpacity style={styles.forgotPasswordButton}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-          </Link>
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <Link href="/(auth)/signup" asChild>
-            <TouchableOpacity>
-              <Text style={styles.link}>Sign Up</Text>
-            </TouchableOpacity>
-          </Link>
+          <View style={styles.footer}>
+            <Text style={[styles.footerText, { color: colors.textSubtle }]}>
+              Don't have an account?{' '}
+            </Text>
+            <Link href="/(auth)/signup" asChild>
+              <TouchableOpacity>
+                <Text style={[styles.link, { color: colors.text }]}>Sign Up</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  content: {
+  formWrapper: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
+    paddingVertical: 32,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 8,
+  formWrapperDesktop: {
+    paddingHorizontal: 56,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+  formInner: {
+    maxWidth: 400,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  heading: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 6,
+    letterSpacing: -0.5,
+  },
+  subheading: {
+    fontSize: 15,
     marginBottom: 32,
+    letterSpacing: 0.1,
   },
   form: {
-    gap: 16,
+    gap: 20,
   },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
+  inputGroup: {
+    gap: 6,
   },
-  button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    padding: 16,
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
   },
-  buttonDisabled: {
-    opacity: 0.7,
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
   },
-  buttonText: {
-    color: '#fff',
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     fontSize: 16,
-    fontWeight: '600',
   },
-  forgotPasswordButton: {
-    alignSelf: 'flex-end',
-    marginTop: -8,
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonMarginTop: {
+    marginTop: 4,
   },
   forgotPasswordText: {
-    color: '#007AFF',
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '400',
   },
-  errorContainer: {
-    backgroundColor: '#FFE5E5',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#FF3B30',
-  },
-  errorText: {
-    color: '#FF3B30',
-    fontSize: 14,
+  errorTextCenter: {
     textAlign: 'center',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: 28,
   },
   footerText: {
-    color: '#666',
     fontSize: 14,
   },
   link: {
-    color: '#007AFF',
     fontSize: 14,
     fontWeight: '600',
   },
